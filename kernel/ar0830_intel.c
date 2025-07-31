@@ -187,11 +187,9 @@ static int ar0830_set_ctrl(struct v4l2_ctrl *ctrl)
 	struct ar0830 *ar0830 =
 		container_of(ctrl->handler, struct ar0830, ctrl_handler);
 	struct i2c_client *client = v4l2_get_subdevdata(&ar0830->sd);
-	s64 exposure_max, exposure_def;
 	struct v4l2_subdev_state *state;
 	const struct v4l2_mbus_framefmt *format;
 	int ret;
-	u64 val;
 
 	state = v4l2_subdev_get_locked_active_state(&ar0830->sd);
 	format = v4l2_subdev_state_get_format(state, 0);
@@ -249,7 +247,6 @@ static int ar0830_init_controls(struct ar0830 *ar0830)
 	struct i2c_client *client = v4l2_get_subdevdata(&ar0830->sd);
 	struct v4l2_fwnode_device_properties props;
 	struct v4l2_ctrl_handler *ctrl_hdlr;
-	s64 exposure_max, vblank_max, vblank_def, hblank;
 	u32 link_freq_size;
 	int ret;
 
@@ -319,7 +316,7 @@ static int ar0830_stall(struct ar0830 *ar0830, int stall_en)
 		return ret;
 	}
 
-	usleep_range(100,100);
+	usleep_range(100,200);
 
 	return ret;
 }
@@ -396,9 +393,7 @@ static int ar0830_set_format(struct v4l2_subdev *sd,
 			     struct v4l2_subdev_format *fmt)
 {
 	struct ar0830 *ar0830 = to_ar0830(sd);
-	struct i2c_client *client = v4l2_get_subdevdata(&ar0830->sd);
 	const struct ar0830_mode *mode;
-	int ret;
 
 	mode = v4l2_find_nearest_size(supported_modes,
 				      ARRAY_SIZE(supported_modes),
@@ -587,7 +582,6 @@ static int ar0830_write_firmware_window (struct ar0830 *ar0830)
 	int regAddr = 0x8000;
 	int length = 0;
 
-#if 1
 	for (int i = 0; i < ar0830->firmware->size / 256; i++) {
 		buf = buf + 256;
 		for (int j=0; j<50; j++) {
@@ -598,7 +592,6 @@ static int ar0830_write_firmware_window (struct ar0830 *ar0830)
 				wbuf[2] = *(buf + 6 + j * 5 + 3);
 				wbuf[3] = *(buf + 6 + j * 5 + 4);
 
-				struct i2c_msg msg;
 				u8 i2c_buf[4];
 
 				i2c_buf[0] = wbuf[0];
@@ -620,16 +613,10 @@ static int ar0830_write_firmware_window (struct ar0830 *ar0830)
 				wbuf[0] = *(buf + 6 + j * 5 + 3);
 				wbuf[1] = *(buf + 6 + j * 5 + 4);
 
-				struct i2c_msg msg;
 				u8 i2c_buf[2];
 
 				i2c_buf[0] = wbuf[0];
 				i2c_buf[1] = wbuf[1];
-
-				msg.addr = client->addr;
-				msg.flags = 0;
-				msg.len = 2;
-				msg.buf = i2c_buf;
 
 				ret = ar0830_write_reg(ar0830, regAddr, i2c_buf, 2);
 				if (ret < 0) {
@@ -643,15 +630,9 @@ static int ar0830_write_firmware_window (struct ar0830 *ar0830)
 			{
 				wbuf[0] = *(buf + 6 + j * 5 + 4);
 
-				struct i2c_msg msg;
 				u8 i2c_buf[1];
 
 				i2c_buf[0] = wbuf[0];
-
-				msg.addr = client->addr;
-				msg.flags = 0;
-				msg.len = 1;
-				msg.buf = i2c_buf;
 
 				ret = ar0830_write_reg(ar0830, regAddr, i2c_buf, 1);
 				if (ret < 0) {
@@ -669,7 +650,6 @@ static int ar0830_write_firmware_window (struct ar0830 *ar0830)
 				regAddr = 0x8000;
 		}
 	}
-#endif
 
 	return 0;
 }
@@ -700,7 +680,6 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 	int ret;
 	u8 data[4];
 
-#if 1
 	// configuration before load flash
 	// basic control reg
 	data[0] = 0x00;
@@ -740,7 +719,7 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 	check_val(ar0830, AR0830_REG_VALUE_32BIT, 0xe000, data);
 
 	dev_info(&client->dev, "RESET LOW");
-	usleep_range(50000,50000);
+	msleep(50);
 
 	data[0] = 0x00;
 	data[1] = 0x00;
@@ -755,7 +734,7 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 	check_val(ar0830, AR0830_REG_VALUE_32BIT, 0xe000, data);
 
 	dev_info(&client->dev, "RESET HIGH");
-	usleep_range(50000,50000);
+	msleep(50);
 
 	// SIPS basic control reg
 	data[0] = 0x00;
@@ -794,8 +773,6 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 	}
 	check_val(ar0830, AR0830_REG_VALUE_32BIT, 0x6034, data);
 
-#endif
-#if 1
 	/* load firmware */
 	ret = ar0830_load_firmware (ar0830);
 	if (ret) {
@@ -803,8 +780,6 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 		release_firmware(ar0830->firmware);
 		return ret;
 	}
-#endif
-#if 1
 	//ATOMIC default 0x0000
 	data[0] = 0x00;
 	data[1] = 0x01;
@@ -845,7 +820,7 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 	}
 	check_val(ar0830, AR0830_REG_VALUE_16BIT,  0x1184, data);
 	
-	usleep_range(200000, 200000);
+	msleep(200);
 
 	//BOOTDATA_STAGE default 0x0000
 	data[0] = 0xff;
@@ -857,7 +832,7 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 	}
 	check_val(ar0830, AR0830_REG_VALUE_16BIT, 0x6002, data);
 
-	usleep_range(500000, 500000);
+	msleep(500);
 
 	//BOOTDATA_CHECKSUM default 0x0000
 	data[0] = 0xff;
@@ -869,7 +844,7 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 	}
 	check_val(ar0830, AR0830_REG_VALUE_16BIT,  0x6134, data);
 
-	usleep_range(500000, 500000);
+	msleep(500);
 
 	//PREVIEW_MAX_FPS
 	data[0] = 0x0f;
@@ -881,16 +856,14 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 	}
 	check_val(ar0830, AR0830_REG_VALUE_16BIT, 0x2020, data);
 
-	usleep_range(500000, 500000);
-#endif
+	msleep(500);
+
 	return 0;
 }
 static int ar0830_probe(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
 	struct ar0830 *ar0830;
-	u64 value = 0;
-	u32 val;
 
 	int ret;
 
@@ -911,7 +884,6 @@ static int ar0830_probe(struct i2c_client *client)
 
 	v4l2_i2c_subdev_init(&ar0830->sd, client, &ar0830_subdev_ops);
 
-#if 1
 	ar0830->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_IN);
 	if (IS_ERR(ar0830->reset_gpio))
 		return dev_err_probe(dev, PTR_ERR(ar0830->reset_gpio),
@@ -924,15 +896,12 @@ static int ar0830_probe(struct i2c_client *client)
 	ar0830_s_reset(ar0830, 0);
 
 	msleep(100);
-#endif
 
-#if 1
 	ret = ar0830_board_setup(ar0830);
 	if (ret) {
 		dev_err(dev, "failed to setup board: %d", ret);
 		return ret;
 	}
-#endif
 
 	ar0830->cur_mode = &supported_modes[0];
 	ret = ar0830_init_controls(ar0830);
