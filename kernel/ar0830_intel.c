@@ -33,7 +33,7 @@
 
 #define AR0830_PIXEL_RATE		600000000ULL
 
-#define BOOTDATA 							"NewBootdata.txt"
+#define BOOTDATA "NewBootdata.txt"
 
 #define STALL 1
 
@@ -47,6 +47,12 @@
 
 #define AR0830_REG_VALUE_16BIT			2
 #define AR0830_REG_VALUE_32BIT			4
+#define OFFSET_BASE 			6
+#define OFFSET_STEP 			5
+
+#define REG_VALUE_4			4
+#define REG_VALUE_2			2
+#define REG_VALUE_1			1
 
 #define to_ar0830(_sd)	container_of(_sd, struct ar0830, sd)
 
@@ -132,13 +138,13 @@ static void check_val(struct ar0830 *ar0830, u16 len, u16 addr, u8 *data)
 		return;
 	} else {
 		if (len == 1)
-			dev_info(&client->dev, "0x%04x read value: 0x%x, write value: 0x%x, %s\n", addr, reg_value_check, data[0], reg_value_check == data[0] ? "OK" : "FAIL");
+			dev_dbg(&client->dev, "0x%04x read value: 0x%x, write value: 0x%x, %s\n", addr, reg_value_check, data[0], reg_value_check == data[0] ? "OK" : "FAIL");
 		if (len == 2)
-			dev_info(&client->dev, "0x%04x read value: 0x%x%x, write value: 0x%x%x, %s\n", addr,
+			dev_dbg(&client->dev, "0x%04x read value: 0x%x%x, write value: 0x%x%x, %s\n", addr,
 			       (reg_value_check >> 8) & 0xff, reg_value_check & 0xff,
 			       data[0], data[1], reg_value_check == ((data[0] << 8) | data[1]) ? "OK" : "FAIL");
 		if (len == 4)
-			dev_info(&client->dev, "0x%04x read value: 0x%x%x%x%x, write value: 0x%x%x%x%x, %s\n", addr,
+			dev_dbg(&client->dev, "0x%04x read value: 0x%x%x%x%x, write value: 0x%x%x%x%x, %s\n", addr,
 			       (reg_value_check >> 24) & 0xff,
 			       (reg_value_check >> 16) & 0xff,
 			       (reg_value_check >> 8) & 0xff,
@@ -305,9 +311,9 @@ static int ar0830_stall(struct ar0830 *ar0830, int stall_en)
 
 	dev_info(ar0830->sd.dev, "stall: %s\n", (stall_en) ? "Enable" : "Disable");
 
-	if(stall_en) {	//true: probe, stop streaming
+	if (stall_en) { //true: probe, stop streaming
 		ret = cci_write(ar0830->regmap, CCI_REG16(SYS_START), SYS_START_STOP_ALL_STREAM, NULL);
-	} else {		//false: start streaming
+	} else {        //false: start streaming
 		ret = cci_write(ar0830->regmap, CCI_REG16(SYS_START), SYS_START_START_STREAM, NULL);
 	}
 
@@ -581,16 +587,17 @@ static int ar0830_write_firmware_window (struct ar0830 *ar0830)
 	u8 wbuf[4];
 	int regAddr = 0x8000;
 	int length = 0;
+	int i,j;
 
-	for (int i = 0; i < ar0830->firmware->size / 256; i++) {
+	for (i = 0; i < ar0830->firmware->size / 256; i++) {
 		buf = buf + 256;
-		for (int j=0; j<50; j++) {
-			if (*(buf + 6 + j * 5) == 4)
+		for (j = 0; j < 50; j++) {
+			if (*(buf + OFFSET_BASE + j * OFFSET_STEP) == REG_VALUE_4)
 			{
-				wbuf[0] = *(buf + 6 + j * 5 + 1);
-				wbuf[1] = *(buf + 6 + j * 5 + 2);
-				wbuf[2] = *(buf + 6 + j * 5 + 3);
-				wbuf[3] = *(buf + 6 + j * 5 + 4);
+				wbuf[0] = *(buf + OFFSET_BASE  + j * OFFSET_STEP + 1);
+				wbuf[1] = *(buf + OFFSET_BASE  + j * OFFSET_STEP + 2);
+				wbuf[2] = *(buf + OFFSET_BASE  + j * OFFSET_STEP + 3);
+				wbuf[3] = *(buf + OFFSET_BASE  + j * OFFSET_STEP + 4);
 
 				u8 i2c_buf[4];
 
@@ -599,49 +606,49 @@ static int ar0830_write_firmware_window (struct ar0830 *ar0830)
 				i2c_buf[2] = wbuf[2];
 				i2c_buf[3] = wbuf[3];
 
-				ret = ar0830_write_reg(ar0830, regAddr, i2c_buf, 4);
+				ret = ar0830_write_reg(ar0830, regAddr, i2c_buf, REG_VALUE_4);
 				if (ret < 0) {
 					dev_err(ar0830->sd.dev, "i2c_transfer failed at regAddr: 0x%x, ret: %d", regAddr, ret);
 					return -EIO;
 				}
 
-				length += 4;
-				regAddr += 4; // reg += len
+				length += REG_VALUE_4;
+				regAddr += REG_VALUE_4;
 			}
-			else if (*(buf + 6 + j * 5) == 2)
+			else if (*(buf + OFFSET_BASE + j * OFFSET_STEP) == REG_VALUE_2)
 			{
-				wbuf[0] = *(buf + 6 + j * 5 + 3);
-				wbuf[1] = *(buf + 6 + j * 5 + 4);
+				wbuf[0] = *(buf + OFFSET_BASE + j * OFFSET_STEP + 3);
+				wbuf[1] = *(buf + OFFSET_BASE + j * OFFSET_STEP + 4);
 
 				u8 i2c_buf[2];
 
 				i2c_buf[0] = wbuf[0];
 				i2c_buf[1] = wbuf[1];
 
-				ret = ar0830_write_reg(ar0830, regAddr, i2c_buf, 2);
+				ret = ar0830_write_reg(ar0830, regAddr, i2c_buf, REG_VALUE_2);
 				if (ret < 0) {
 					dev_err(ar0830->sd.dev, "i2c_transfer failed at regAddr: 0x%x, ret: %d", regAddr, ret);
 					return -EIO;
 				}
-				length += 2;
-				regAddr += 2;
+				length += REG_VALUE_2;
+				regAddr += REG_VALUE_2;
 			}
-			else if (*(buf + 6 + j * 5) == 1)
+			else if (*(buf + OFFSET_BASE + j * OFFSET_STEP) == REG_VALUE_1)
 			{
-				wbuf[0] = *(buf + 6 + j * 5 + 4);
+				wbuf[0] = *(buf + OFFSET_BASE + j * OFFSET_STEP + 4);
 
 				u8 i2c_buf[1];
 
 				i2c_buf[0] = wbuf[0];
 
-				ret = ar0830_write_reg(ar0830, regAddr, i2c_buf, 1);
+				ret = ar0830_write_reg(ar0830, regAddr, i2c_buf, REG_VALUE_1);
 				if (ret < 0) {
 					dev_err(ar0830->sd.dev, "i2c_transfer failed at regAddr: 0x%x, ret: %d", regAddr, ret);
 					return -EIO;
 				}
 
-				length += 1;
-				regAddr += 1;
+				length += REG_VALUE_1;
+				regAddr += REG_VALUE_1;
 			}
 			else 
 				break;
