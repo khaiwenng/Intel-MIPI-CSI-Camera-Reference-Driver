@@ -11,7 +11,7 @@ This document provides configuration details for **ar0830_intel** sensor. The ta
 | | Camera Option 1 | Camera Option 2 |
 |----------|----------|----------|
 | Sensor Model | User Custom | User Custom|
-| Custom HID | INTC0830 | INTC0830 |
+| Custom HID | LIAR0830 | LIAR0830 |
 | GPIO Control | Control Logic 1| Control Logic 2|
 | MIPI Port| 1 | 4 |
 | LaneUsed | x4 | x4 |

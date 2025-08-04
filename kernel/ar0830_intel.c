@@ -968,7 +968,7 @@ probe_error_v4l2_ctrl_handler_free:
 }
 
 static const struct acpi_device_id ar0830_acpi_ids[] = {
-	{ "INTC0830" },
+	{ "LIAR0830" },
 	{}
 };
 MODULE_DEVICE_TABLE(acpi, ar0830_acpi_ids);
