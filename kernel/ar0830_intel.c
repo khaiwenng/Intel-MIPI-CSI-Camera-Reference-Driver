@@ -37,6 +37,8 @@
 #define MAX_FIRMWARE_SIZE 			(1024*1024)
 #define FIRMWARE_BLOCK_SIZE 		256
 #define MAX_REGISTERS_PER_BLOCK 	50
+#define FIRMWARE_REG_START_ADDR		0x8000
+#define FIRMWARE_REG_END_ADDR		0x9fff
 #define STALL 1
 
 #define SYS_START							0x601A
@@ -587,7 +589,7 @@ static int ar0830_write_firmware_window (struct ar0830 *ar0830)
 	int ret = 0;
 	u8 *buf = (u8 *)ar0830->firmware->data;
 	u8 wbuf[4];
-	int regAddr = 0x8000;
+	int regAddr = FIRMWARE_REG_START_ADDR;
 	int length = 0;
 	int i,j;
 
@@ -655,8 +657,8 @@ static int ar0830_write_firmware_window (struct ar0830 *ar0830)
 			else 
 				break;
 
-			if (regAddr > 0x9fff)
-				regAddr = 0x8000;
+			if (regAddr > FIRMWARE_REG_END_ADDR)
+				regAddr = FIRMWARE_REG_START_ADDR;
 		}
 	}
 
