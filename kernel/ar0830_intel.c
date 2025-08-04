@@ -34,7 +34,9 @@
 #define AR0830_PIXEL_RATE		600000000ULL
 
 #define BOOTDATA "NewBootdata.txt"
-
+#define MAX_FIRMWARE_SIZE 			(1024*1024)
+#define FIRMWARE_BLOCK_SIZE 		256
+#define MAX_REGISTERS_PER_BLOCK 	50
 #define STALL 1
 
 #define SYS_START							0x601A
@@ -69,7 +71,7 @@ struct ar0830_mode {
 };
 
 static const s64 link_freq_menu_items[] = {
-	600000000ULL, //600M
+	600000000ULL, /* 600M */
 };
 
 static const struct ar0830_mode supported_modes[] = {
@@ -166,19 +168,19 @@ static int ar0830_write_reg(struct ar0830 *ar0830, u16 reg, u8 *data, u8 length)
         return -EINVAL;
     }
 
-    // Prepare the buffer: register address (big-endian) + data
-    buf[0] = reg >> 8;       // High byte of register address
-    buf[1] = reg & 0xFF;     // Low byte of register address
+    /* Prepare the buffer: register address (big-endian) + data */
+    buf[0] = reg >> 8;       /* High byte of register address */
+    buf[1] = reg & 0xFF;     /* Low byte of register address */
 
-    memcpy(&buf[2], data, length); // Copy the data into the buffer
+	/* Copy the data into the buffer */
+    memcpy(&buf[2], data, length);
 
-    // Prepare the I2C message
-    msg.addr = client->addr; // I2C device address
-    msg.flags = 0;           // Write operation
-    msg.len = length + 2;    // Total length: register address + data
-    msg.buf = buf;           // Buffer containing the data
+    /* Prepare the I2C message */
+    msg.addr = client->addr;
+    msg.flags = 0;
+    msg.len = length + 2;
+    msg.buf = buf;
 
-    // Perform the I2C transfer
     ret = i2c_transfer(client->adapter, &msg, 1);
     if (ret != 1) {
         dev_err(&client->dev, "Failed to write register 0x%04x, ret: %d\n", reg, ret);
@@ -568,7 +570,7 @@ static int ar0830_request_firmware (struct ar0830 *ar0830)
 		return -EINVAL;
 	}
 	
-	if (ar0830->firmware->size > 1024*1024) {
+	if (ar0830->firmware->size > MAX_FIRMWARE_SIZE) {
 		dev_err (ar0830->sd.dev, "firmware size is too big: %zu", ar0830->firmware->size);
 		release_firmware(ar0830->firmware);
 		return -EINVAL;
@@ -589,9 +591,9 @@ static int ar0830_write_firmware_window (struct ar0830 *ar0830)
 	int length = 0;
 	int i,j;
 
-	for (i = 0; i < ar0830->firmware->size / 256; i++) {
-		buf = buf + 256;
-		for (j = 0; j < 50; j++) {
+	for (i = 0; i < ar0830->firmware->size / FIRMWARE_BLOCK_SIZE; i++) {
+		buf = buf + FIRMWARE_BLOCK_SIZE;
+		for (j = 0; j < MAX_REGISTERS_PER_BLOCK; j++) {
 			if (*(buf + OFFSET_BASE + j * OFFSET_STEP) == REG_VALUE_4)
 			{
 				wbuf[0] = *(buf + OFFSET_BASE  + j * OFFSET_STEP + 1);
