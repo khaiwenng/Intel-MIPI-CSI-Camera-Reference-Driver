@@ -158,36 +158,36 @@ static void check_val(struct ar0830 *ar0830, u16 len, u16 addr, u8 *data)
 }
 static int ar0830_write_reg(struct ar0830 *ar0830, u16 reg, u8 *data, u8 length)
 {
-    struct i2c_client *client = v4l2_get_subdevdata(&ar0830->sd);
-    struct i2c_msg msg;
-    u8 buf[6];
-    int ret;
+	struct i2c_client *client = v4l2_get_subdevdata(&ar0830->sd);
+	struct i2c_msg msg;
+	u8 buf[6];
+	int ret;
 
-    if (length > 4) {
-        dev_err(&client->dev, "Invalid length: %d\n", length);
-        return -EINVAL;
-    }
+	if (length > 4) {
+		dev_err(&client->dev, "Invalid length: %d\n", length);
+		return -EINVAL;
+	}
 
-    /* Prepare the buffer: register address (big-endian) + data */
-    buf[0] = reg >> 8;       /* High byte of register address */
-    buf[1] = reg & 0xFF;     /* Low byte of register address */
+	/* Prepare the buffer: register address (big-endian) + data */
+	buf[0] = reg >> 8;       /* High byte of register address */
+	buf[1] = reg & 0xFF;     /* Low byte of register address */
 
 	/* Copy the data into the buffer */
-    memcpy(&buf[2], data, length);
+	memcpy(&buf[2], data, length);
 
-    /* Prepare the I2C message */
-    msg.addr = client->addr;
-    msg.flags = 0;
-    msg.len = length + 2;
-    msg.buf = buf;
+	/* Prepare the I2C message */
+	msg.addr = client->addr;
+	msg.flags = 0;
+	msg.len = length + 2;
+	msg.buf = buf;
 
-    ret = i2c_transfer(client->adapter, &msg, 1);
-    if (ret != 1) {
-        dev_err(&client->dev, "Failed to write register 0x%04x, ret: %d\n", reg, ret);
-        return -EIO;
-    }
-    dev_dbg(&client->dev, "Successfully wrote to register 0x%04x, data: %*ph\n", reg, length, data);
-    return 0;
+	ret = i2c_transfer(client->adapter, &msg, 1);
+	if (ret != 1) {
+		dev_err(&client->dev, "Failed to write register 0x%04x, ret: %d\n", reg, ret);
+		return -EIO;
+	}
+	dev_dbg(&client->dev, "Successfully wrote to register 0x%04x, data: %*ph\n", reg, length, data);
+	return 0;
 }
 
 static int ar0830_set_ctrl(struct v4l2_ctrl *ctrl)
