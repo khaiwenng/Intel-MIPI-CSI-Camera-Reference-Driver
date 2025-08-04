@@ -93,7 +93,7 @@ struct ar0830 {
 	const struct ar0830_mode *cur_mode;
 	struct gpio_desc *reset_gpio;
 
-	// firmware
+	/* firmware */
 	const struct firmware *firmware;
 };
 
@@ -240,7 +240,7 @@ static int ar0830_s_reset(struct ar0830 *ar0830, int on)
 		/* exit RESET */
 		gpiod_set_value_cansleep(ar0830->reset_gpio, 1);
 	} else {
-		// enter reset
+		/* enter reset */
 		gpiod_set_value_cansleep(ar0830->reset_gpio, 0);
 
 		pm_runtime_put(&client->dev);
@@ -311,9 +311,9 @@ static int ar0830_stall(struct ar0830 *ar0830, int stall_en)
 
 	dev_info(ar0830->sd.dev, "stall: %s\n", (stall_en) ? "Enable" : "Disable");
 
-	if (stall_en) { //true: probe, stop streaming
+	if (stall_en) { /* true: probe, stop streaming */
 		ret = cci_write(ar0830->regmap, CCI_REG16(SYS_START), SYS_START_STOP_ALL_STREAM, NULL);
-	} else {        //false: start streaming
+	} else {        /* false: start streaming */
 		ret = cci_write(ar0830->regmap, CCI_REG16(SYS_START), SYS_START_START_STREAM, NULL);
 	}
 
@@ -322,7 +322,7 @@ static int ar0830_stall(struct ar0830 *ar0830, int stall_en)
 		return ret;
 	}
 
-	usleep_range(100,200);
+	usleep_range(100, 200);
 
 	return ret;
 }
@@ -359,7 +359,7 @@ static int ar0830_stop_streaming(struct ar0830 *ar0830)
 	int ret;
 	struct i2c_client *client = v4l2_get_subdevdata(&ar0830->sd);
 
-	// keep as a reference
+	/* keep as a reference */
 	/*
 	u64 value;
 	ret = cci_read(ar0830->regmap, CCI_REG16(0x0002), &value, NULL); // frame_cnt
@@ -562,7 +562,7 @@ static int ar0830_request_firmware (struct ar0830 *ar0830)
 		return ret;
 	}
 
-	// Check firmware is requested
+	/* Check firmware is requested */
 	if (!ar0830->firmware) {
 		dev_err (ar0830->sd.dev, "firmware not requested");
 		return -EINVAL;
@@ -687,8 +687,9 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 	int ret;
 	u8 data[4];
 
-	// configuration before load flash
-	// basic control reg
+	/* configuration before load flash */
+
+	/* basic control reg */
 	data[0] = 0x00;
 	data[1] = 0x2A;
 	data[2] = 0x00;
@@ -743,7 +744,7 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 	dev_info(&client->dev, "RESET HIGH");
 	msleep(50);
 
-	// SIPS basic control reg
+	/* SIPS basic control reg */
 	data[0] = 0x00;
 	data[1] = 0x14;
 	ret = ar0830_write_reg(ar0830, 0xf05a, data, 2);
@@ -753,10 +754,9 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 	}
 	check_val(ar0830, AR0830_REG_VALUE_16BIT, 0xf05a, data);
 
-	// stall uses regmap_write
-	// basic system reg
+	/* basic system reg */
 
-	//SYSTEM_FREQ_IN	// default 00320000
+	/* SYSTEM_FREQ_IN */
 	data[0] = 0x00;
 	data[1] = 0x30;
 	data[2] = 0x00;
@@ -768,7 +768,7 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 	}
 	check_val(ar0830, AR0830_REG_VALUE_32BIT, 0x6024, data);
 
-	//INF_MIPI_FREQ_TGT // default 04b00000
+	/* INF_MIPI_FREQ_TGT */
 	data[0] = 0x03;
 	data[1] = 0x80;
 	data[2] = 0x00;
@@ -780,14 +780,14 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 	}
 	check_val(ar0830, AR0830_REG_VALUE_32BIT, 0x6034, data);
 
-	/* load firmware */
 	ret = ar0830_load_firmware (ar0830);
 	if (ret) {
 		dev_err(&client->dev, "failed to load firmware: %d", ret);
 		release_firmware(ar0830->firmware);
 		return ret;
 	}
-	//ATOMIC default 0x0000
+
+	/* ATOMIC */
 	data[0] = 0x00;
 	data[1] = 0x01;
 	ret = ar0830_write_reg(ar0830, 0x1184, data, 2);
@@ -797,7 +797,7 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 	}
 	check_val(ar0830, AR0830_REG_VALUE_16BIT, 0x1184, data);
 
-	//PREVIEW_WIDTH default 0x0280
+	/* PREVIEW_WIDTH */
 	data[0] = 0xf;
 	data[1] = 0x00;
 	ret = ar0830_write_reg(ar0830, 0x2000, data, 2);
@@ -807,17 +807,17 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 	}
 	check_val(ar0830, AR0830_REG_VALUE_16BIT,  0x2000, data);
 
-	//PREVIEW_HEIGHT default 0x1e0
+	/* PREVIEW_HEIGHT */
 	data[0] = 0x8;
 	data[1] = 0x70;
-	ret = ar0830_write_reg(ar0830, 0x2002, data, 2); // fail
+	ret = ar0830_write_reg(ar0830, 0x2002, data, 2);
 	if (ret) {
 		dev_err(&client->dev, "failed to write 0x2002: %d", ret);
 		return ret;
 	}
 	check_val(ar0830, AR0830_REG_VALUE_16BIT,  0x2002, data);
 
-	//ATOMIC
+	/* ATOMIC */
 	data[0] = 0x00;
 	data[1] = 0x13;
 	ret = ar0830_write_reg(ar0830, 0x1184, data, 2);
@@ -829,7 +829,7 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 	
 	msleep(200);
 
-	//BOOTDATA_STAGE default 0x0000
+	/* BOOTDATA_STAGE */
 	data[0] = 0xff;
 	data[1] = 0xff;
 	ret = ar0830_write_reg(ar0830, 0x6002, data, 2);
@@ -841,7 +841,7 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 
 	msleep(500);
 
-	//BOOTDATA_CHECKSUM default 0x0000
+	/* BOOTDATA_CHECKSUM */
 	data[0] = 0xff;
 	data[1] = 0xff;
 	ret = ar0830_write_reg(ar0830, 0x6134, data, 2);
@@ -853,7 +853,7 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 
 	msleep(500);
 
-	//PREVIEW_MAX_FPS
+	/* PREVIEW_MAX_FPS */
 	data[0] = 0x0f;
 	data[1] = 0x00;
 	ret = ar0830_write_reg(ar0830, 0x2020, data, 2);
@@ -953,7 +953,7 @@ static int ar0830_probe(struct i2c_client *client)
 	}
 
 #if STALL
-	ret = ar0830_stall(ar0830, true);//new
+	ret = ar0830_stall(ar0830, true);
 	if (ret) {
 		dev_err (ar0830->sd.dev, "error to stall: %d", ret);
 		return ret;
