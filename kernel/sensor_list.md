@@ -1,6 +1,6 @@
 ## Description
 
-This document maintains the list of sensor enabled.
+This document maintains the list of enabled sensors.
 
 | Sensor Name | Vendor | Platform | Kernel Version | Type |
 |-------------|--------|----------|----------------|------|
