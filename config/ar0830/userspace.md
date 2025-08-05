@@ -6,6 +6,8 @@ This document provides configuration details for **ar0830_intel** sensor. The ta
 
 **Note:** No External Clock required.
 
+**Note:** Below BIOS option is for MTL platform.
+
 #### Camera Option
 
 | | Camera Option 1 | Camera Option 2 |
