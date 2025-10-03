@@ -1,6 +1,6 @@
 ## Description
 
-This document provides configuration details for **isx031** sensor. The table below outlines key parameters and their corresponding values used in the system setup.
+This document details the configuration settings for the ISX031 MIPI CSI sensor, providing essential information for system integration. The table below presents the key parameters and their respective values used during system setup and validation.
 
 ## BIOS Configuration Table
 
@@ -78,9 +78,9 @@ This document provides configuration details for **isx031** sensor. The table be
    <availableSensors value="...,isx031-1-mipi-0,isx031-2-mipi-4"/>
    ```
 
-## Sample userspace command
+## Sample Userspace Command
 
-#### Sensor device selection
+#### Sensor Device Selection
 
 | MIPI Port | Command Pipeline |
 |----------|----------|
@@ -89,7 +89,7 @@ This document provides configuration details for **isx031** sensor. The table be
 
 **Note**: Refer to icamerasrc device-name property for more sensor details.
 
-#### Frame Buffer Memory Type (IO Mode) selection
+#### Frame Buffer Memory Type (IO Mode) Selection
 
 | IO Mode | Command Pipeline |
 |----------|----------|
@@ -98,14 +98,14 @@ This document provides configuration details for **isx031** sensor. The table be
 
 **Note**: Refer to icamerasrc io-mode property for more sensor details.
 
-#### Number of Stream (Single Stream / Multi Stream)
+#### Number of Stream (Single Stream / Multi Stream) Selection
 
 | Number of Stream | Command Pipeline |
 |----------|----------|
 | x1 | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=**isx031-1** printfps=true io-mode=4 ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1080' ! glimagesink sync=false |
 | x2 | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=**isx031-1** printfps=true io-mode=4 ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1080' ! glimagesink icamerasrc num-buffers=-1 scene-mode=normal device-name=**isx031-2** printfps=true io-mode=4 ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1080' ! glimagesink sync=false |
 
-#### FPS result
+#### FPS Result
 
 | Number of Stream | IO Mode | FPS Result |
 |----------|----------|----------|
