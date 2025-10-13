@@ -42,3 +42,4 @@ This document outlines the configuration parameters for Sensor ISX031, including
 |-----|-----|
 | D3 Embedded | 0x40 |
 | Leopard Imaging | 0x62 |
+| Sensing | 0x44 |
