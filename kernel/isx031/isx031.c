@@ -445,10 +445,19 @@ static int isx031_start_streaming(struct isx031 *isx031)
 	}
 
     /* Drive FSIN GPIO high to enable frame sync */
-	if (isx031->fsin_gpio){
-		gpiod_set_value_cansleep(isx031->fsin_gpio, 0);
-		usleep_range(300000, 500000);
-		gpiod_set_value_cansleep(isx031->fsin_gpio, 1);
+	if (isx031->fsin_gpio != NULL) {
+		int fsin_count = 0;
+		int fsin_ret;
+		
+		do {
+			gpiod_set_value_cansleep(isx031->fsin_gpio, 1);
+			fsin_ret = gpiod_get_value_cansleep(isx031->fsin_gpio);
+			usleep_range(100000, 100500);
+			if (++fsin_count >= 5) {
+				dev_err(&client->dev, "%s: failed to set FSIN GPIO high, gpio value is %d", __func__, fsin_ret);
+				break;
+			}
+		} while (fsin_ret != 1);
 	} else {
 		dev_warn(&client->dev, "FSIN GPIO not available during streaming start\n");
 	}
@@ -462,11 +471,20 @@ static void isx031_stop_streaming(struct isx031 *isx031)
 	if (isx031_mode_transit(isx031, ISX031_STATE_STARTUP))
 		dev_err(&client->dev, "failed to stop streaming");
 
-    /* Drive FSIN GPIO high to enable frame sync */
-	if (isx031->fsin_gpio){
-		gpiod_set_value_cansleep(isx031->fsin_gpio, 1);
-		usleep_range(300000, 500000);
-		gpiod_set_value_cansleep(isx031->fsin_gpio, 0);
+    /* Drive FSIN GPIO low to disable frame sync */
+	if (isx031->fsin_gpio != NULL) {
+		int fsin_count = 0;
+		int fsin_ret;
+		
+		do {
+			gpiod_set_value_cansleep(isx031->fsin_gpio, 0);
+			fsin_ret = gpiod_get_value_cansleep(isx031->fsin_gpio);
+			usleep_range(100000, 100500);
+			if (++fsin_count >= 5) {
+				dev_err(&client->dev, "%s: failed to set FSIN GPIO low, gpio value is %d", __func__, fsin_ret);
+				break;
+			}
+		} while (fsin_ret != 0);
 	} else {
 		dev_warn(&client->dev, "FSIN GPIO not available during streaming stop\n");
 	}
@@ -844,7 +862,7 @@ static int isx031_probe(struct i2c_client *client)
 		dev_warn(&client->dev, "no platform data provided\n");
 
 	isx031->reset_gpio = devm_gpiod_get_optional(&client->dev, "reset",
-						     GPIOD_OUT_LOW);
+						     GPIOD_OUT_HIGH);
     isx031->fsin_gpio = devm_gpiod_get_optional(&client->dev, "fsin",
 						     GPIOD_OUT_LOW);
 
@@ -892,10 +910,9 @@ static int isx031_probe(struct i2c_client *client)
 		isx031->sd.state_lock = isx031->sd.ctrl_handler->lock;
 		v4l2_subdev_init_finalize(&isx031->sd);
 	}
-
 	ret = isx031_identify_module(isx031);
 	if (ret) {
-		dev_err(&client->dev, "failed to find sensor: %d", ret);
+		dev_err(&client->dev, "failed to find sensor: %d (I2C addr 0x%02x, bus %d)", ret, client->addr, client->adapter->nr);
 		return ret;
 	}
 
