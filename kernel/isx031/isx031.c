@@ -827,7 +827,7 @@ static int isx031_probe(struct i2c_client *client)
 
 	isx031->reset_gpio = devm_gpiod_get_optional(&client->dev, "reset",
 						     GPIOD_OUT_LOW);
-    isx031->fsin_gpio = devm_gpiod_get_optional(&client->dev, "fsin",
+	isx031->fsin_gpio = devm_gpiod_get_optional(&client->dev, "fsin",
 						     GPIOD_OUT_LOW);
 
 	if (IS_ERR(isx031->reset_gpio))
