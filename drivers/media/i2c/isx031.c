@@ -368,6 +368,7 @@ static int isx031_set_driver_mode(struct isx031 *isx031)
 		return mode;
 
 	ret = isx031_write_reg(isx031, ISX031_REG_MODE_SELECT, 1, mode);
+
 	return ret;
 }
 
@@ -478,6 +479,45 @@ static void isx031_update_pad_format(const struct isx031_mode *mode,
 	fmt->height = mode->height;
 	fmt->code = mode->code;
 	fmt->field = V4L2_FIELD_NONE;
+}
+
+static int isx031_get_mipi_lane(struct isx031 *isx031, struct device *dev)
+{
+	struct fwnode_handle *endpoint;
+	struct v4l2_fwnode_endpoint bus_cfg = {
+		.bus_type = V4L2_MBUS_CSI2_DPHY,
+	};
+
+	int ret;
+
+	endpoint =
+		fwnode_graph_get_endpoint_by_id(dev_fwnode(dev), 0, 0,
+						FWNODE_GRAPH_ENDPOINT_NEXT);
+	if (!endpoint) {
+		dev_err(dev, "endpoint node not found");
+		return -EPROBE_DEFER;
+	}
+
+	ret = v4l2_fwnode_endpoint_alloc_parse(endpoint, &bus_cfg);
+	if (ret) {
+		dev_err(dev, "parsing endpoint node fail");
+		goto out_err;
+	}
+
+	/* Check the number of MIPI CSI2 data lanes */
+	if (bus_cfg.bus.mipi_csi2.num_data_lanes != 2 &&
+	    bus_cfg.bus.mipi_csi2.num_data_lanes != 4) {
+		dev_err(dev, "only 2 or 4 data lanes are currently supported");
+		goto out_err;
+	}
+
+	isx031->lanes = bus_cfg.bus.mipi_csi2.num_data_lanes;
+
+out_err:
+	v4l2_fwnode_endpoint_free(&bus_cfg);
+	fwnode_handle_put(endpoint);
+
+	return ret;
 }
 
 static int isx031_start_streaming(struct isx031 *isx031)
@@ -609,10 +649,11 @@ static int __maybe_unused isx031_resume(struct device *dev)
 			ret = gpiod_get_value_cansleep(isx031->reset_gpio);
 			usleep_range(200 * 1000, 200 * 1000 + 500);
 
-			if (++count >= 5) {
+			if (++count >= 10) {
 				dev_err(&client->dev, "%s: failed to power on reset gpio, reset gpio is %d", __func__, ret);
 				break;
 			}
+
 		} while (ret != 0);
 	}
 
@@ -873,7 +914,7 @@ static int isx031_probe(struct i2c_client *client)
 	else if (isx031->reset_gpio == NULL)
 		dev_warn(&client->dev, "Reset GPIO not found");
 	else
-		dev_dbg(&client->dev, "Found reset GPIO");
+		dev_info(&client->dev, "Reset GPIO found");
 
 	info = device_get_match_data(&client->dev);
 	if (info)
@@ -923,8 +964,17 @@ static int isx031_probe(struct i2c_client *client)
 		snprintf(isx031->sd.name, sizeof(isx031->sd.name), "isx031 %s",
 			 isx031->platform_data->suffix);
 
-	if (isx031->platform_data)
+	if (isx031->platform_data && isx031->platform_data->lanes)
 		isx031->lanes = isx031->platform_data->lanes;
+
+	if (isx031->is_direct) {
+		/* mipi sensor read info from fwnode entrypoint bus cfg */
+		ret = isx031_get_mipi_lane(isx031, &client->dev);
+		if (ret) {
+			dev_err(&client->dev, "failed to get MIPI lane configuration");
+			goto probe_error_media_entity_cleanup;
+		}
+	}
 
 	mutex_init(&isx031->mutex);
 
@@ -937,6 +987,7 @@ static int isx031_probe(struct i2c_client *client)
 		dev_err(&client->dev, "failed to apply preset mode");
 		goto probe_error_media_entity_cleanup;
 	}
+
 	isx031->cur_mode = isx031->pre_mode;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 13, 0)
 	ret = v4l2_async_register_subdev_sensor_common(&isx031->sd);
