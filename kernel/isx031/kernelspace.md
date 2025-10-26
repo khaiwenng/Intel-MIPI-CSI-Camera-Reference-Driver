@@ -43,3 +43,5 @@ This document outlines the configuration parameters for Sensor ISX031, including
 | D3 Embedded | 0x40 |
 | Leopard Imaging | 0x62 |
 | Sensing | 0x40 |
+
+> **Note for Sensing Sensor:** To stream with Sensing sensor, apply the patch in `patch/v6.12/0001-serdes-add-fsin-gpio.patch` to add essential FSIN GPIO support to the serdes driver. This configuration has been tested with kernel version 6.12, tag: `lts-v6.12.36-linux-250711T071314Z`.
