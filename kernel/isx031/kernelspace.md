@@ -44,4 +44,15 @@ This document outlines the configuration parameters for Sensor ISX031, including
 | Leopard Imaging | 0x62 |
 | Sensing | 0x40 |
 
-> **Note for Sensing Sensor:** To stream with Sensing sensor, apply the patch in `patch/v6.12/0001-serdes-add-fsin-gpio.patch` to add essential FSIN GPIO support to the serdes driver. This configuration has been tested with kernel version 6.12, tag: `lts-v6.12.36-linux-250711T071314Z`.
+> **Note for Sensing Sensor:** To stream with Sensing sensor, apply the patch in `patch/v6.12/0001-serdes-add-fsin-gpio.patch` to add essential FSIN GPIO support to the serdes driver. This configuration has been tested with kernel version 6.12, tag: `https://github.com/intel/linux-intel-lts/tree/lts-v6.12.36-linux-250711T071314Z`.
+>
+> **Steps to apply the patch:**
+> 1. Navigate to kernel source directory:
+>    ```bash
+>    cd linux-intel-lts/
+>    ```
+> 2. Apply the patch:
+>    ```bash
+>    git apply drivers.camera.scaling.sensor/patch/v6.12/0001-serdes-add-fsin-gpio.patch
+>    ```
+> 3. Recompile, install and reboot into the new kernel
