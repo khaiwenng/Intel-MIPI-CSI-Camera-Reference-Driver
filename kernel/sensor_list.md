@@ -9,3 +9,4 @@ This document maintains the list of enabled sensors.
 | ISX031 | MIPI CSI | D3 Embedded | ARL | K6.12 | IPU6 |
 | ISX031 | GMSL | Leopard Imaging | MTL | K6.12 | IPU6 |
 | ISX031 | GMSL | Sensing | ARL | K6.12 | IPU6 |
+| AR0233 | GMSL | Sensing | ARL | K6.12 | IPU6 |
