@@ -8,6 +8,7 @@ This document provides configuration details for the sensor below. The table bel
 | Platform | Kernel Version |
 |----------|----------------|
 | MTL      | K6.12          |
+| PTL      | K6.17          |
 
 
 | Sensor Details      | Value         |
@@ -17,12 +18,23 @@ This document provides configuration details for the sensor below. The table bel
 | ISP Model           | AP1302       |
 
 | Configuration Parameter | Value    |
-|------------------------|----------|
-| Lane                   | 4        |
-| Resolution             | 3840x2160|
-| Format                 | UYVY     |
-| Streaming FPS          | 15       |
+|-------------------------|----------|
+| Lane                    | 2/4      |
+| Resolution              | 3840x2160|
+| Format                  | UYVY     |
+| Streaming FPS           | 15       |
 
 ### Ipu-Bridge changes
 
-IPU_SENSOR_CONFIG("LIAR0830", 1, 600000000)
+This configuration has been tested with kernel version 6.12, tag: `https://github.com/intel/linux-intel-lts/tree/lts-v6.12.36-linux-250711T071314Z`.
+
+**Steps to apply the patch:**
+> 1. Navigate to kernel source directory:
+>    ```bash
+>    cd linux-intel-lts/
+>    ```
+> 2. Apply the patch:
+>    ```bash
+>    git apply drivers.camera.scaling.sensor/patch/v6.12/0001-ar0830-Register-AR0830-HID-into-ipu-bridge.patch
+>    ```
+> 3. Recompile, install and reboot into the new kernel

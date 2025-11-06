@@ -18,88 +18,7 @@
 #include <linux/regmap.h>
 #include <linux/unaligned.h>
 
-#define AR0830_ANALOG_GAIN_MIN		0
-#define AR0830_ANALOG_GAIN_MAX		0x16
-#define AR0830_ANALOG_GAIN_STEP		1
-#define AR0830_ANALOG_GAIN_DEFAULT	0xe
-
-#define AR0830_GLOBAL_GAIN_MIN		1
-#define AR0830_GLOBAL_GAIN_MAX		0x162
-#define AR0830_GLOBAL_GAIN_STEP		1
-#define AR0830_GLOBAL_GAIN_DEFAULT	0x80
-
-#define AR0830_COMMON_WIDTH			3840
-#define AR0830_COMMON_HEIGHT		2160
-
-#define AR0830_PIXEL_RATE		600000000ULL
-
-#define BOOTDATA "NewBootdata.txt"
-#define MAX_FIRMWARE_SIZE 			(1024*1024)
-#define FIRMWARE_BLOCK_SIZE 		256
-#define MAX_REGISTERS_PER_BLOCK 	50
-#define FIRMWARE_REG_START_ADDR		0x8000
-#define FIRMWARE_REG_END_ADDR		0x9fff
-#define STALL 1
-
-#define SYS_START							0x601A
-#define SYS_START_STALL_MODE_FRAME			(0U << 6)
-#define SYS_START_STALL_MODE_DISABLED		(1U << 6)
-#define SYS_START_STALL_MODE_ALL_POWER_DOWN	(3U << 6)
-#define SYS_START_STALL_EN					BIT(8)
-#define SYS_START_START_STREAM				(SYS_START_STALL_EN | SYS_START_STALL_MODE_FRAME)
-#define SYS_START_STOP_ALL_STREAM			(SYS_START_STALL_EN | SYS_START_STALL_MODE_ALL_POWER_DOWN)
-
-#define AR0830_REG_VALUE_16BIT			2
-#define AR0830_REG_VALUE_32BIT			4
-#define OFFSET_BASE 			6
-#define OFFSET_STEP 			5
-
-#define REG_VALUE_4			4
-#define REG_VALUE_2			2
-#define REG_VALUE_1			1
-
-#define to_ar0830(_sd)	container_of(_sd, struct ar0830, sd)
-
-static const struct regmap_config sensor_regmap_config = {
-	.reg_bits = 16,
-	.val_bits = 16,
-};
-
-struct ar0830_mode {
-	u32 width;
-	u32 height;
-	u32 code;
-
-};
-
-static const s64 link_freq_menu_items[] = {
-	600000000ULL, /* 600M */
-};
-
-static const struct ar0830_mode supported_modes[] = {
-	{
-		.width = AR0830_COMMON_WIDTH,
-		.height = AR0830_COMMON_HEIGHT,
-		.code = MEDIA_BUS_FMT_UYVY8_1X16,
-	},
-};
-
-struct ar0830 {
-	struct v4l2_subdev sd;
-	struct media_pad pad;
-	struct v4l2_ctrl_handler ctrl_handler;
-
-	/* V4L2 Controls */
-	struct v4l2_ctrl *link_freq;
-
-	struct regmap *regmap;
-	unsigned long link_freq_bitmap;
-	const struct ar0830_mode *cur_mode;
-	struct gpio_desc *reset_gpio;
-
-	/* firmware */
-	const struct firmware *firmware;
-};
+#include "ar0830.h"
 
 static int ar0830_read_reg(struct ar0830 *ar0830, u16 reg, u16 len, u32 *val)
 {
@@ -130,34 +49,25 @@ static int ar0830_read_reg(struct ar0830 *ar0830, u16 reg, u16 len, u32 *val)
 
 	return 0;
 }
-static void check_val(struct ar0830 *ar0830, u16 len, u16 addr, u8 *data)
+
+static void check_val(struct ar0830 *ar0830, u32 addr, u32 write_val)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&ar0830->sd);
 	u32 reg_value_check;
 	int ret;
 
-	ret = ar0830_read_reg(ar0830, addr, len, &reg_value_check);
+	ret = ar0830_read(ar0830, addr, &reg_value_check);
+
 	if (ret) {
 		dev_err(&client->dev, "failed to read 0x%04x: %d", addr, ret);
-		return;
 	} else {
-		if (len == 1)
-			dev_dbg(&client->dev, "0x%04x read value: 0x%x, write value: 0x%x, %s\n", addr, reg_value_check, data[0], reg_value_check == data[0] ? "OK" : "FAIL");
-		if (len == 2)
-			dev_dbg(&client->dev, "0x%04x read value: 0x%x%x, write value: 0x%x%x, %s\n", addr,
-			       (reg_value_check >> 8) & 0xff, reg_value_check & 0xff,
-			       data[0], data[1], reg_value_check == ((data[0] << 8) | data[1]) ? "OK" : "FAIL");
-		if (len == 4)
-			dev_dbg(&client->dev, "0x%04x read value: 0x%x%x%x%x, write value: 0x%x%x%x%x, %s\n", addr,
-			       (reg_value_check >> 24) & 0xff,
-			       (reg_value_check >> 16) & 0xff,
-			       (reg_value_check >> 8) & 0xff,
-			       reg_value_check & 0xff,
-			       data[0], data[1], data[2], data[3], reg_value_check == ((data[0] << 24) | (data[1] << 16) | (data[2] << 8) | data[3]) ? "OK" : "FAIL");
+		dev_err(&client->dev, "0x%04x read value: 0x%x, write value: 0x%x, %s\n", AR0830_REG_ADDR(addr), 
+				reg_value_check, write_val, reg_value_check == write_val ? "OK" : "FAIL");
 	}
 
 	return;
 }
+
 static int ar0830_write_reg(struct ar0830 *ar0830, u16 reg, u8 *data, u8 length)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&ar0830->sd);
@@ -232,24 +142,14 @@ static const struct v4l2_ctrl_ops ar0830_ctrl_ops = {
 	.s_ctrl = ar0830_set_ctrl,
 };
 
-static int ar0830_s_reset(struct ar0830 *ar0830, int on)
+static void ar0830_s_reset(struct ar0830 *ar0830, int on)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(&ar0830->sd);
-	int ret;
-
 	if (on) {
-		ret = pm_runtime_resume_and_get(&client->dev);
-		if (ret < 0)
-			return ret;
-		/* exit RESET */
 		gpiod_set_value_cansleep(ar0830->reset_gpio, 1);
 	} else {
 		/* enter reset */
 		gpiod_set_value_cansleep(ar0830->reset_gpio, 0);
-
-		pm_runtime_put(&client->dev);
 	}
-	return 0;
 }
 
 static int ar0830_init_controls(struct ar0830 *ar0830)
@@ -309,27 +209,213 @@ static void ar0830_update_pad_format(const struct ar0830_mode *mode,
 	fmt->code = mode->code;
 	fmt->field = V4L2_FIELD_NONE;
 }
+
+#define ar0830_poll_timeout(ar0830,reg,val,cond,sleep_us,timeout_us) \
+({ \
+	struct regmap *__regmap; \
+	u16 addr; \
+	int __retpoll; \
+	__retpoll = __ar0830_poll_param(ar0830,reg,&__regmap,&addr); \
+	if (!__retpoll) \
+		__retpoll = regmap_read_poll_timeout(__regmap, addr, val, cond, sleep_us, timeout_us); \
+	__retpoll; \
+})
+
+static int __ar0830_read(struct ar0830 *ar0830, u32 reg, u32 *val)
+{
+	unsigned int size = AR0830_REG_SIZE(reg);
+	u16 addr = AR0830_REG_ADDR(reg);
+	int ret;
+
+	switch (size) {
+	case 2:
+		ret = regmap_read(ar0830->regmap, addr, val);
+		break;
+	case 4:
+		ret = regmap_read(ar0830->regmap32, addr, val);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	if (ret) {
+		dev_err(ar0830->dev, "%s: register 0x%04x %s failed: %d\n",
+			__func__, addr, "read", ret);
+		return ret;
+	}
+
+	dev_dbg(ar0830->dev, "%s: R0x%04x = 0x%0*x\n", __func__,
+		addr, size * 2, *val);
+
+	return 0;
+}
+
+static int __ar0830_write(struct ar0830 *ar0830, u32 reg, u32 val)
+{
+	unsigned int size = AR0830_REG_SIZE(reg);
+	u16 addr = AR0830_REG_ADDR(reg);
+	int ret;
+
+	switch (size) {
+	case 2:
+		ret = regmap_write(ar0830->regmap, addr, val);
+		break;
+	case 4:
+		ret = regmap_write(ar0830->regmap32, addr, val);
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	if (ret) {
+		dev_err(ar0830->dev, "%s: register 0x%04x %s failed: %d\n",
+			__func__, addr, "write", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
+static int ar0830_read(struct ar0830 *ar0830, u32 reg, u32 *val)
+{
+	u32 page = AR0830_REG_PAGE(reg);
+	int ret;
+
+	if (page) {
+		if (ar0830->reg_page != page) {
+			ret = __ar0830_write(ar0830, AR0830_ADVANCED_BASE,
+					     page);
+			if (ret < 0)
+				return ret;
+
+			ar0830->reg_page = page;
+		}
+
+		reg &= ~AR0830_REG_PAGE_MASK;
+		reg += AR0830_REG_ADV_START;
+	}
+
+	return __ar0830_read(ar0830, reg, val);
+}
+
+static int ar0830_write(struct ar0830 *ar0830, u32 reg, u32 val,
+			int *err)
+{
+	u32 page = AR0830_REG_PAGE(reg);
+	int ret;
+
+	if (err && *err)
+		return *err;
+
+	if (page) {
+		if (ar0830->reg_page != page) {
+			ret = __ar0830_write(ar0830, AR0830_ADVANCED_BASE,
+					     page);
+			if (ret < 0)
+				goto done;
+
+			ar0830->reg_page = page;
+		}
+
+		reg &= ~AR0830_REG_PAGE_MASK;
+		reg += AR0830_REG_ADV_START;
+	}
+
+	ret = __ar0830_write(ar0830, reg, val);
+
+done:
+	if (err && ret)
+		*err = ret;
+
+	return ret;
+}
+
+/* Setup for regmap poll */
+static int __ar0830_poll_param(struct ar0830 *ar0830, u32 reg,
+		struct regmap **regmap,u16 *addr)
+{
+	u32 page = AR0830_REG_PAGE(reg);
+	int ret;
+
+	if (page) {
+		dev_dbg(ar0830->dev, "%s: got page\n", __func__);
+		if (ar0830->reg_page != page) {
+			dev_dbg(ar0830->dev, "%s: got page but doesn't match reg_page\n", __func__);
+			ret = __ar0830_write(ar0830, AR0830_ADVANCED_BASE,
+					     page);
+			if (ret < 0)
+				return ret;
+
+			ar0830->reg_page = page;
+		}
+
+		reg &= ~AR0830_REG_PAGE_MASK;
+		reg += AR0830_REG_ADV_START;
+	}
+
+	*addr = AR0830_REG_ADDR(reg);
+
+	switch (AR0830_REG_SIZE(reg)) {
+	case 2:
+		*regmap=ar0830->regmap;
+		break;
+	case 4:
+		*regmap=ar0830->regmap32;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	dev_dbg(ar0830->dev, "%s: R0x%08x -> 0x%04x\n", __func__,
+			reg,*addr);
+
+	return 0;
+}
+
 static int ar0830_stall(struct ar0830 *ar0830, int stall_en)
 {
 	int ret = 0;
-
+	u32 value;
 	dev_info(ar0830->sd.dev, "stall: %s\n", (stall_en) ? "Enable" : "Disable");
 
 	if (stall_en) { /* true: probe, stop streaming */
-		ret = cci_write(ar0830->regmap, CCI_REG16(SYS_START), SYS_START_STOP_ALL_STREAM, NULL);
+		ar0830_write(ar0830, AR0830_SYS_START,
+				 	AR0830_SYS_START_STALL_EN |
+					AR0830_SYS_START_STALL_MODE_STANDBY_SENSOR_OFF, &ret);
+		/*
+		 * Wait for Stall Status
+		 */
+		ret = ar0830_poll_timeout(ar0830, AR0830_SYS_START, value,
+				value & AR0830_SYS_START_STALL_STATUS,
+				10000, 5000000);
+
+		if (ret) {
+			dev_err(ar0830->dev,"Stall Failed: %d\n", ret);
+		}
 	} else {        /* false: start streaming */
-		ret = cci_write(ar0830->regmap, CCI_REG16(SYS_START), SYS_START_START_STREAM, NULL);
+		ar0830_write(ar0830, AR0830_SYS_START,
+				    AR0830_SYS_START_STALL_EN |
+				    AR0830_SYS_START_STALL_MODE_DISABLED, &ret);
+
+		/*
+		 * Wait for Stall Status
+		 */
+		ret = ar0830_poll_timeout(ar0830, AR0830_SYS_START, value,
+				!(value & AR0830_SYS_START_STALL_STATUS),
+				10000, 5000000);
+				
+		if (ret) {
+			dev_err(ar0830->dev,"Stall Failed: %d\n", ret);
+		}
 	}
 
 	if (ret < 0) {
 		dev_err(ar0830->sd.dev, "regmap_write error (address 0x%x)\n", SYS_START);
-		return ret;
 	}
-
-	usleep_range(100, 200);
 
 	return ret;
 }
+
 static int ar0830_start_streaming(struct ar0830 *ar0830)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&ar0830->sd);
@@ -343,7 +429,7 @@ static int ar0830_start_streaming(struct ar0830 *ar0830)
 	ret = ar0830_stall(ar0830, false);
 	if (ret < 0) {
 		dev_err(&client->dev, "failed to stall");
-		return ret;
+		goto err_rpm_put;
 	}
 #endif
 
@@ -470,6 +556,126 @@ static int ar0830_init_state(struct v4l2_subdev *sd,
 	return 0;
 }
 
+#ifdef DEBUG
+static int ar0830_dump_console(struct ar0830 *ar0830)
+{
+	u8 *buffer;
+	u8 *endp;
+	u8 *p;
+	int ret;
+
+	buffer = kmalloc(AR0830_CON_BUF_SIZE + 1, GFP_KERNEL);
+	if (!buffer)
+		return -ENOMEM;
+
+	// XXX use CON_WP, CON_RP see AR0830-Rev2.ini
+
+	// 256 16-bit register : 512 bytes
+	ret = regmap_raw_read(ar0830->regmap, AR0830_CON_BUF(0), buffer,
+			      AR0830_CON_BUF_SIZE/2);
+	if (ret < 0) {
+		dev_err(ar0830->dev, "Failed to read console buffer: %d\n",
+			ret);
+		goto done;
+	}
+
+	buffer[AR0830_CON_BUF_SIZE] = '\0';
+
+	for (p = buffer; p < buffer + AR0830_CON_BUF_SIZE && *p; p = endp + 1) {
+		endp = strchrnul(p, '\n');
+		*endp = '\0';
+
+		dev_info(ar0830->dev,"log > %s\n",p);
+	}
+
+	ret = 0;
+
+done:
+	kfree(buffer);
+	return ret;
+}
+
+static int ar0830_log_status(struct v4l2_subdev *sd)
+{
+	struct ar0830 *ar0830 = to_ar0830(sd);
+	u16 frame_count_icp;
+	u16 frame_count_brac;
+	u16 frame_count_hinf;
+	u32 warning[4];
+	u32 error[3];
+	unsigned int i;
+	u32 value;
+	int ret;
+
+	/* Dump the console buffer. */
+	ar0830_dump_console(ar0830);
+
+	/* Print errors. */
+	ret = ar0830_read(ar0830, AR0830_ERROR, &error[0]);
+	if (ret < 0)
+		return ret;
+
+	ret = ar0830_read(ar0830, AR0830_ERR_FILE, &error[1]);
+	if (ret < 0)
+		return ret;
+
+	ret = ar0830_read(ar0830, AR0830_ERR_LINE, &error[2]);
+	if (ret < 0)
+		return ret;
+
+	dev_info(ar0830->dev, "ERROR: 0x%04x (file 0x%08x:%u)\n",
+		 error[0], error[1], error[2]);
+
+	ret = ar0830_read(ar0830, AR0830_SIPM_ERR_0, &error[0]);
+	if (ret < 0)
+		return ret;
+
+	ret = ar0830_read(ar0830, AR0830_SIPM_ERR_1, &error[1]);
+	if (ret < 0)
+		return ret;
+
+	dev_info(ar0830->dev, "SIPM_ERR [0] 0x%04x [1] 0x%04x\n",
+		 error[0], error[1]);
+
+	/* Print warnings. */
+	for (i = 0; i < ARRAY_SIZE(warning); ++i) {
+		ret = ar0830_read(ar0830, AR0830_WARNING(i), &warning[i]);
+		if (ret < 0)
+			return ret;
+	}
+
+	dev_info(ar0830->dev,
+		 "WARNING [0] 0x%04x [1] 0x%04x [2] 0x%04x [3] 0x%04x\n",
+		 warning[0], warning[1], warning[2], warning[3]);
+
+	for (i = 0; i < ARRAY_SIZE(ar0830_warnings); ++i) {
+		if ((warning[i / 16] & BIT(i % 16)) &&
+		    ar0830_warnings[i])
+			dev_info(ar0830->dev, "- WARN_%s\n",
+				 ar0830_warnings[i]);
+	}
+
+	/* Print the frame counter. */
+	ret = ar0830_read(ar0830, AR0830_FRAME_CNT, &value);
+	if (ret < 0)
+		return ret;
+
+	frame_count_hinf = value >> 8;
+	frame_count_brac = value & 0xff;
+
+	ret = ar0830_read(ar0830, AR0830_ADV_CAPTURE_A_FV_CNT, &value);
+	if (ret < 0)
+		return ret;
+
+	frame_count_icp = value & 0xffff;
+
+	dev_info(ar0830->dev, "Frame counters: ICP %u, HINF %u, BRAC %u\n",
+		 frame_count_icp, frame_count_hinf, frame_count_brac);
+
+	return 0;
+}
+#endif
+
 static const struct v4l2_subdev_video_ops ar0830_video_ops = {
 	.s_stream = ar0830_set_stream,
 };
@@ -484,6 +690,9 @@ static const struct v4l2_subdev_pad_ops ar0830_pad_ops = {
 static const struct v4l2_subdev_core_ops ar0830_core_ops = {
 	.subscribe_event = v4l2_ctrl_subdev_subscribe_event,
 	.unsubscribe_event = v4l2_event_subdev_unsubscribe,
+#ifdef DEBUG
+	.log_status = ar0830_log_status,
+#endif
 };
 
 static const struct v4l2_subdev_ops ar0830_subdev_ops = {
@@ -499,6 +708,79 @@ static const struct media_entity_operations ar0830_subdev_entity_ops = {
 static const struct v4l2_subdev_internal_ops ar0830_internal_ops = {
 	.init_state = ar0830_init_state,
 };
+
+static int ar0830_set_no_of_lanes(struct ar0830 *ar0830)
+{
+	int ret;
+	u32 val;
+
+	ret = ar0830_read(ar0830, AR0830_PREVIEW_HINF_CTRL, &val);
+
+	if (!ret) {
+		val &= ~0x000F;
+		val |= ar0830->num_data_lanes;
+		ar0830_write(ar0830, AR0830_PREVIEW_HINF_CTRL,
+				 val, &ret);
+	}
+	return ret;
+}
+
+static int __maybe_unused ar0830_suspend(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct ar0830 *ar0830 = to_ar0830(sd);
+
+	dev_dbg(&client->dev, "%s\n", __func__);
+	gpiod_set_value_cansleep(ar0830->reset_gpio, 1);
+
+	return 0;
+}
+
+static int __maybe_unused ar0830_resume(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct ar0830 *ar0830 = to_ar0830(sd);
+	int ret = 0;
+	int count = 0;
+	u32 val = 0;
+
+	dev_dbg(&client->dev, "%s\n", __func__);
+
+	if (ar0830->reset_gpio != NULL) {
+		do {
+			gpiod_set_value_cansleep(ar0830->reset_gpio, 0);
+			ret = gpiod_get_value_cansleep(ar0830->reset_gpio);
+			usleep_range(200 * 1000, 200 * 1000 + 500);
+
+            if (++count >= 10) {
+                dev_err(&client->dev, "%s: failed to power on reset gpio, reset gpio is %d", __func__, ret);
+                return -ETIMEDOUT;
+            }
+
+		} while (ret != 0);
+	}
+
+	ret = ar0830_read(ar0830, AR0830_BOOTDATA_STAGE, &val);
+	dev_dbg(&client->dev, "%s Validating bootstage data: 0x%x \n", __func__, val);
+
+	if (val != BOOTSTAGE_COMPLETE) {
+		ret = ar0830_board_setup(ar0830);
+		if (ret) {
+			dev_err(&client->dev, "Setting up board again failed");
+			return ret;
+		}
+
+		ret = ar0830_stall(ar0830, true);
+		if (ret) {
+			dev_err (ar0830->sd.dev, "error to stall: %d", ret);
+			return ret;
+		}
+	}
+
+	return 0;
+}
 
 static int ar0830_parse_fwnode(struct ar0830 *ar0830, struct device *dev)
 {
@@ -529,6 +811,8 @@ static int ar0830_parse_fwnode(struct ar0830 *ar0830, struct device *dev)
 		goto out_err;
 	}
 
+	ar0830->num_data_lanes = bus_cfg.bus.mipi_csi2.num_data_lanes;
+
 	ret = v4l2_link_freq_to_bitmap(dev, bus_cfg.link_frequencies,
 				       bus_cfg.nr_of_link_frequencies,
 				       link_freq_menu_items,
@@ -555,6 +839,7 @@ static void ar0830_remove(struct i2c_client *client)
 	pm_runtime_disable(&client->dev);
 	pm_runtime_set_suspended(&client->dev);
 }
+
 static int ar0830_request_firmware (struct ar0830 *ar0830)
 {
 	int ret = 0;
@@ -583,9 +868,9 @@ static int ar0830_request_firmware (struct ar0830 *ar0830)
 
 	return ret;
 }
+
 static int ar0830_write_firmware_window (struct ar0830 *ar0830)
 {
-	struct i2c_client *client = v4l2_get_subdevdata(&ar0830->sd);
 	int ret = 0;
 	u8 *buf = (u8 *)ar0830->firmware->data;
 	u8 wbuf[4];
@@ -685,104 +970,85 @@ static int ar0830_load_firmware (struct ar0830 *ar0830)
 
 	return ret;
 }
+
 static int ar0830_board_setup(struct ar0830 *ar0830)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&ar0830->sd);
-	int ret;
-	u8 data[4];
+	int ret = 0;
+	u32 val;
 
 	/* configuration before load flash */
 
 	/* basic control reg */
-	data[0] = 0x00;
-	data[1] = 0x2A;
-	data[2] = 0x00;
-	data[3] = 0x00;
-	ret = ar0830_write_reg(ar0830, 0xf038, data, 4);
+	ar0830_write(ar0830, AR0830_ADVANCED_BASE, 0x002A0000, &ret);
 	if (ret)
 	{
-		dev_err(&client->dev, "failed to write 0xf038: %d", ret);
+		dev_err(&client->dev, "failed to write to 0x%04x: %d", 
+				AR0830_REG_ADDR(AR0830_ADVANCED_BASE), ret);
 		return ret;
 	}
-	check_val(ar0830, AR0830_REG_VALUE_32BIT, 0xf038, data);
+	check_val(ar0830, AR0830_ADVANCED_BASE, 0x002A0000);
 
-	data[0] = 0x00;
-	data[1] = 0x00;
-	data[2] = 0x06;
-	data[3] = 0x92;
-	ret = ar0830_write_reg(ar0830, 0xe004, data, 4);
+	ar0830_write(ar0830, AR0830_REG_ADV_ADDR_1, 0x00000692, &ret);
 	if (ret)
 	{
-		dev_err(&client->dev, "failed to write 0xe004: %d", ret);
+		dev_err(&client->dev, "failed to write to 0x%04x: %d", 
+				AR0830_REG_ADDR(AR0830_REG_ADV_ADDR_1), ret);
 		return ret;
 	}
-	check_val(ar0830, AR0830_REG_VALUE_32BIT, 0xe004, data);
+	check_val(ar0830, AR0830_REG_ADV_ADDR_1, 0x00000692);
 
-	data[0] = 0x00;
-	data[1] = 0x00;
-	data[2] = 0x04;
-	data[3] = 0x10;
-	ret = ar0830_write_reg(ar0830, 0xe000, data, 4);
+	ar0830_write(ar0830, AR0830_ADV_START, 0x00000410, &ret);
 	if (ret)
 	{
-		dev_err(&client->dev, "failed to write 0xe000: %d", ret);
+		dev_err(&client->dev, "failed to write to 0x%04x: %d", 
+				AR0830_REG_ADDR(AR0830_ADV_START), ret);
 		return ret;
 	}
-	check_val(ar0830, AR0830_REG_VALUE_32BIT, 0xe000, data);
+	check_val(ar0830, AR0830_ADV_START, 0x00000410);
 
 	dev_info(&client->dev, "RESET LOW");
 	msleep(50);
 
-	data[0] = 0x00;
-	data[1] = 0x00;
-	data[2] = 0x04;
-	data[3] = 0x12;
-	ret = ar0830_write_reg(ar0830, 0xe000, data, 4);
+	ar0830_write(ar0830, AR0830_ADV_START, 0x00000412, &ret);
 	if (ret)
 	{
-		dev_err(&client->dev, "failed to write 0xe000: %d", ret);
+		dev_err(&client->dev, "failed to write to 0x%04x again: %d", 
+				AR0830_REG_ADDR(AR0830_ADV_START), ret);
 		return ret;
 	}
-	check_val(ar0830, AR0830_REG_VALUE_32BIT, 0xe000, data);
+	check_val(ar0830, AR0830_ADV_START, 0x00000412);
 
 	dev_info(&client->dev, "RESET HIGH");
 	msleep(50);
 
 	/* SIPS basic control reg */
-	data[0] = 0x00;
-	data[1] = 0x14;
-	ret = ar0830_write_reg(ar0830, 0xf05a, data, 2);
+	ar0830_write(ar0830, AR0830_SIPS_SLEW_CTRL, 0x0014, &ret);
 	if (ret) {
-		dev_err(&client->dev, "failed to write 0xf05a: %d", ret);
+		dev_err(&client->dev, "failed to write to 0x%04x: %d", 
+				AR0830_REG_ADDR(AR0830_SIPS_SLEW_CTRL), ret);
 		return ret;
 	}
-	check_val(ar0830, AR0830_REG_VALUE_16BIT, 0xf05a, data);
 
 	/* basic system reg */
 
-	/* SYSTEM_FREQ_IN */
-	data[0] = 0x00;
-	data[1] = 0x30;
-	data[2] = 0x00;
-	data[3] = 0x00;
-	ret = ar0830_write_reg(ar0830, 0x6024, data, 4);
+	/* SYSTEM_FREQ_IN in MHz */
+	ar0830_write(ar0830, AR0830_SYSTEM_FREQ_IN, TO_S15_16(48), &ret);
 	if (ret) {
-		dev_err(&client->dev, "failed to write 0x6024: %d", ret);
+		dev_err(&client->dev, "failed to write to 0x%04x: %d", 
+				AR0830_REG_ADDR(AR0830_SYSTEM_FREQ_IN), ret);
 		return ret;
 	}
-	check_val(ar0830, AR0830_REG_VALUE_32BIT, 0x6024, data);
 
-	/* INF_MIPI_FREQ_TGT */
-	data[0] = 0x03;
-	data[1] = 0x80;
-	data[2] = 0x00;
-	data[3] = 0x00;
-	ret = ar0830_write_reg(ar0830, 0x6034, data, 4);
+	/* HINF_MIPI_FREQ_TGT in MHz */
+	ar0830_write(ar0830, AR0830_HINF_MIPI_FREQ_TGT, TO_S15_16(1200), &ret);
 	if (ret) {
-		dev_err(&client->dev, "failed to write 0x6034: %d", ret);
+		dev_err(&client->dev, "failed to write to 0x%04x: %d", 
+				AR0830_REG_ADDR(AR0830_HINF_MIPI_FREQ_TGT), ret);
 		return ret;
 	}
-	check_val(ar0830, AR0830_REG_VALUE_32BIT, 0x6034, data);
+
+	msleep(10);
 
 	ret = ar0830_load_firmware (ar0830);
 	if (ret) {
@@ -791,86 +1057,85 @@ static int ar0830_board_setup(struct ar0830 *ar0830)
 		return ret;
 	}
 
-	/* ATOMIC */
-	data[0] = 0x00;
-	data[1] = 0x01;
-	ret = ar0830_write_reg(ar0830, 0x1184, data, 2);
+	/* BOOTDATA_STAGE END */
+	ar0830_write(ar0830, AR0830_BOOTDATA_STAGE, BOOTSTAGE_COMPLETE, &ret);
 	if (ret) {
-		dev_err(&client->dev, "failed to write 0x1184: %d", ret);
+		dev_err(&client->dev, "failed to write to 0x%04x: %d", 
+				AR0830_REG_ADDR(AR0830_BOOTDATA_STAGE), ret);
 		return ret;
 	}
-	check_val(ar0830, AR0830_REG_VALUE_16BIT, 0x1184, data);
+
+	/*
+	* Wait for Bootdata Stage Complete
+	*/
+	ret = ar0830_poll_timeout(ar0830, AR0830_BOOTDATA_STAGE, val,
+			(val == BOOTSTAGE_COMPLETE),
+			10000, 5000000);
+
+#ifdef DEBUG
+	ar0830_log_status(&ar0830->sd);
+#endif
+
+	ar0830_set_no_of_lanes(ar0830);
+	msleep(10);
+
+	/* ATOMIC START RECORDING */
+	ar0830_write(ar0830, AR0830_ATOMIC, ATOMIC_RECORD, &ret);
+	if (ret) {
+		dev_err(&client->dev, "failed to write to 0x%04x to start atomic record: %d", 
+				AR0830_REG_ADDR(AR0830_ATOMIC), ret);
+		return ret;
+	}
+	msleep(5);
 
 	/* PREVIEW_WIDTH */
-	data[0] = 0xf;
-	data[1] = 0x00;
-	ret = ar0830_write_reg(ar0830, 0x2000, data, 2);
+	ar0830_write(ar0830, AR0830_PREVIEW_WIDTH, AR0830_COMMON_WIDTH, &ret);
 	if (ret) {
-		dev_err(&client->dev, "failed to write 0x2000: %d", ret);
+		dev_err(&client->dev, "failed to write to 0x%04x: %d", 
+				AR0830_REG_ADDR(AR0830_PREVIEW_WIDTH), ret);
 		return ret;
 	}
-	check_val(ar0830, AR0830_REG_VALUE_16BIT,  0x2000, data);
 
 	/* PREVIEW_HEIGHT */
-	data[0] = 0x8;
-	data[1] = 0x70;
-	ret = ar0830_write_reg(ar0830, 0x2002, data, 2);
+	ar0830_write(ar0830, AR0830_PREVIEW_HEIGHT, AR0830_COMMON_HEIGHT, &ret);
 	if (ret) {
-		dev_err(&client->dev, "failed to write 0x2002: %d", ret);
+		dev_err(&client->dev, "failed to write to 0x%04x: %d", 
+				AR0830_REG_ADDR(AR0830_PREVIEW_HEIGHT), ret);
 		return ret;
 	}
-	check_val(ar0830, AR0830_REG_VALUE_16BIT,  0x2002, data);
-
-	/* ATOMIC */
-	data[0] = 0x00;
-	data[1] = 0x13;
-	ret = ar0830_write_reg(ar0830, 0x1184, data, 2);
-	if (ret) {
-		dev_err(&client->dev, "failed to write 0x1184: %d", ret);
-		return ret;
-	}
-	check_val(ar0830, AR0830_REG_VALUE_16BIT,  0x1184, data);
-	
-	msleep(200);
-
-	/* BOOTDATA_STAGE */
-	data[0] = 0xff;
-	data[1] = 0xff;
-	ret = ar0830_write_reg(ar0830, 0x6002, data, 2);
-	if (ret) {
-		dev_err(&client->dev, "failed to write 0x6002: %d", ret);
-		return ret;
-	}
-	check_val(ar0830, AR0830_REG_VALUE_16BIT, 0x6002, data);
-
-	msleep(500);
-
-	/* BOOTDATA_CHECKSUM */
-	data[0] = 0xff;
-	data[1] = 0xff;
-	ret = ar0830_write_reg(ar0830, 0x6134, data, 2);
-	if (ret) {
-		dev_err(&client->dev, "failed to write 0x6134: %d", ret);
-		return ret;
-	}
-	check_val(ar0830, AR0830_REG_VALUE_16BIT,  0x6134, data);
-
-	msleep(500);
 
 	/* PREVIEW_MAX_FPS */
-	data[0] = 0x0f;
-	data[1] = 0x00;
-	ret = ar0830_write_reg(ar0830, 0x2020, data, 2);
+	ar0830_write(ar0830, AR0830_PREVIEW_MAX_FPS, PREVIEW_MAX_FPS(15), &ret);
 	if (ret) {
-		dev_err(&client->dev, "failed to write 0x2020: %d", ret);
+		dev_err(&client->dev, "failed to write to 0x%04x: %d", 
+				AR0830_REG_ADDR(AR0830_PREVIEW_MAX_FPS), ret);
 		return ret;
 	}
-	check_val(ar0830, AR0830_REG_VALUE_16BIT, 0x2020, data);
 
-	msleep(500);
+	msleep(5);
+
+	/* ATOMIC FINISH */
+	ar0830_write(ar0830, AR0830_ATOMIC, ATOMIC_UPDATE_ALL, &ret);
+	if (ret) {
+		dev_err(&client->dev, "failed to write to 0x%04x to finish atomic record: %d", 
+				AR0830_REG_ADDR(AR0830_ATOMIC), ret);
+		return ret;
+	}
+
+	msleep(200);
+
+	/* Validating the values */
+	check_val(ar0830, AR0830_SIPS_SLEW_CTRL, 0x0014);
+	check_val(ar0830, AR0830_SYSTEM_FREQ_IN, TO_S15_16(48));
+	check_val(ar0830, AR0830_HINF_MIPI_FREQ_TGT, TO_S15_16(1200));
+	check_val(ar0830, AR0830_PREVIEW_WIDTH, AR0830_COMMON_WIDTH);
+	check_val(ar0830, AR0830_PREVIEW_HEIGHT, AR0830_COMMON_HEIGHT);
+	check_val(ar0830, AR0830_BOOTDATA_CHECKSUM, BOOTSTAGE_CHECKSUM);
+	check_val(ar0830, AR0830_PREVIEW_MAX_FPS, PREVIEW_MAX_FPS(15));
 
 	return 0;
 }
+
 static int ar0830_probe(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
@@ -882,23 +1147,29 @@ static int ar0830_probe(struct i2c_client *client)
 	if (!ar0830)
 		return -ENOMEM;
 
+	ar0830->dev = &client->dev;
 	ret = ar0830_parse_fwnode(ar0830, dev);
 	if (ret)
 		return ret;
+		
+	ar0830->reset_gpio = devm_gpiod_get(&client->dev, "reset", GPIOD_OUT_LOW);
+	if (IS_ERR(ar0830->reset_gpio))
+		return dev_err_probe(dev, PTR_ERR(ar0830->reset_gpio),
+				     "failed to get reset gpio\n");
 
-	ar0830->regmap = devm_regmap_init_i2c(client, &sensor_regmap_config);
+	ar0830->regmap = devm_regmap_init_i2c(client, &ar0830_regmap_config);
 	if (IS_ERR(ar0830->regmap))
 		return dev_err_probe(dev, PTR_ERR(ar0830->regmap),
-				     "failed to init CCI");
+				     "failed to init CCI for regmap");
+
+	ar0830->regmap32 = devm_regmap_init_i2c(client, &ar0830_regmap32_config);
+	if (IS_ERR(ar0830->regmap32))
+		return dev_err_probe(dev, PTR_ERR(ar0830->regmap32),
+				     "failed to init CCI for regmap32");
 
 	msleep(100);
 
 	v4l2_i2c_subdev_init(&ar0830->sd, client, &ar0830_subdev_ops);
-
-	ar0830->reset_gpio = devm_gpiod_get(dev, "reset", GPIOD_IN);
-	if (IS_ERR(ar0830->reset_gpio))
-		return dev_err_probe(dev, PTR_ERR(ar0830->reset_gpio),
-				     "failed to get reset gpio\n");
 
 	ar0830_s_reset(ar0830, 1);
 
@@ -978,6 +1249,10 @@ probe_error_v4l2_ctrl_handler_free:
 	return ret;
 }
 
+static const struct dev_pm_ops ar0830_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(ar0830_suspend, ar0830_resume)
+};
+
 static const struct acpi_device_id ar0830_acpi_ids[] = {
 	{ "LIAR0830" },
 	{}
@@ -986,8 +1261,9 @@ MODULE_DEVICE_TABLE(acpi, ar0830_acpi_ids);
 
 static struct i2c_driver ar0830_i2c_driver = {
 	.driver = {
-		.name = "ar0830_intel",
+		.name = "ar0830",
 		.acpi_match_table = ACPI_PTR(ar0830_acpi_ids),
+		.pm = &ar0830_pm_ops,
 	},
 	.probe = ar0830_probe,
 	.remove = ar0830_remove,
@@ -997,4 +1273,5 @@ module_i2c_driver(ar0830_i2c_driver);
 
 MODULE_DESCRIPTION("ON Semiconductor AR0830 sensor driver");
 MODULE_AUTHOR("Ng, Khai Wen <khai.wen.ng@intel.com>");
+MODULE_AUTHOR("Jonathan Lui <jonathan.ming.jun.lui@intel.com>");
 MODULE_LICENSE("GPL");

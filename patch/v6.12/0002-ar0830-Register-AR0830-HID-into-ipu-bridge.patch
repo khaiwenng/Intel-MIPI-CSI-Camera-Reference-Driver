@@ -1,0 +1,26 @@
+From e0c9e40099ccd89b6134a76222bdd65e68549f5b Mon Sep 17 00:00:00 2001
+From: Jonathan Lui <jonathan.ming.jun.lui@intel.com>
+Date: Fri, 31 Oct 2025 14:37:54 +0800
+Subject: [PATCH] ar0830: Register AR0830 HID into ipu-bridge
+
+Signed-off-by: Jonathan, Lui <jonathan.ming.jun.lui@intel.com>
+---
+ drivers/media/pci/intel/ipu-bridge.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/media/pci/intel/ipu-bridge.c b/drivers/media/pci/intel/ipu-bridge.c
+index 21fa05436c24..26f1e740d453 100644
+--- a/drivers/media/pci/intel/ipu-bridge.c
++++ b/drivers/media/pci/intel/ipu-bridge.c
+@@ -89,6 +89,8 @@ static const struct ipu_sensor_config ipu_supported_sensors[] = {
+ 	IPU_SENSOR_CONFIG("INTC10C5", 0),
+ 	/* Lontium lt6911uxc */
+ 	IPU_SENSOR_CONFIG("INTC10B1", 0),
++	/* LI AR0830 */
++	IPU_SENSOR_CONFIG("LIAR0830", 1, 600000000),
+ };
+ 
+ static const struct ipu_sensor_config ipu_supported_sensors_dummy[] = {
+-- 
+2.43.0
+
