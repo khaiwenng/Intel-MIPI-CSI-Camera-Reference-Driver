@@ -40,7 +40,7 @@ subdir-ccflags-$(CONFIG_VIDEO_MAX9X) += -DCONFIG_VIDEO_MAX9X
 subdir-ccflags-$(CONFIG_VIDEO_ISX031) += -DCONFIG_VIDEO_ISX031
 subdir-ccflags-$(CONFIG_VIDEO_AR0233) += -DCONFIG_VIDEO_AR0233
 subdir-ccflags-$(CONFIG_VIDEO_AR0820) += -DCONFIG_VIDEO_AR0820
-subdir-ccflags-$(CONFIG_VIDEO_AR0234) += -DCONFIG_VIDEO_AR0234
+subdir-ccflags-$(CONFIG_VIDEO_AR0234) += -DCONFIG_VIDEO_AR0234 -DCONFIG_V4L2_CCI_I2C
 subdir-ccflags-$(CONFIG_IPU_BRIDGE) += -DCONFIG_IPU_BRIDGE
 subdir-ccflags-$(CONFIG_INTEL_IPU_ACPI) += -DCONFIG_INTEL_IPU_ACPI
 subdir-ccflags-$(CONFIG_VIDEO_LT6911UXE) += -DCONFIG_VIDEO_LT6911UXE
@@ -60,6 +60,10 @@ subdir-ccflags-y += -DCONFIG_VIDEO_INTEL_IPU7
 
 # Build IPU7 drivers from submodule
 obj-m += ipu7-drivers/drivers/media/pci/intel/ipu7/
+
+# Build V4L2 core module
+obj-m += 6.17.0/drivers/media/v4l2-core/
+
 else ifeq ($(KERNEL_EQ_6_12),1)
 # IPU6 driver configs
 export CONFIG_VIDEO_INTEL_IPU6=m
@@ -69,6 +73,7 @@ subdir-ccflags-y += -DCONFIG_VIDEO_INTEL_IPU6
 
 # Build IPU6 drivers from submodule
 obj-m += ipu6-drivers/drivers/media/pci/intel/ipu6/
+
 endif
 
 obj-m += drivers/media/pci/intel/
