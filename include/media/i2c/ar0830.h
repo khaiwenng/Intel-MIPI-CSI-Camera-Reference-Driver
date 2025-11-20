@@ -155,7 +155,7 @@ static int ar0830_board_setup(struct ar0830 *ar0830);
 static int ar0830_read(struct ar0830 *ar0830, u32 reg, u32 *val);
 static int __ar0830_read(struct ar0830 *ar0830, u32 reg, u32 *val);
 static int __ar0830_poll_param(struct ar0830 *ar0830, u32 reg,
-		struct regmap **regmap,u16 *addr);
+		struct regmap **regmap, u16 *addr);
 
 #ifdef DEBUG
 static int ar0830_log_status(struct v4l2_subdev *sd);
