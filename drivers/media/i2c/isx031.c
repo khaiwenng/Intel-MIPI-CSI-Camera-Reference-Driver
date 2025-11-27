@@ -984,12 +984,6 @@ static int isx031_probe(struct i2c_client *client)
 	else
 		dev_info(&client->dev, "Reset GPIO found");
 
-	ret = isx031_identify_module(client);
-	if (ret) {
-		dev_err(&client->dev, "isx031 identify module failed");
-		return ret;
-	}
-
 	info = device_get_match_data(&client->dev);
 	if (info)
 		isx031->is_direct = info->is_direct;
@@ -1042,6 +1036,12 @@ static int isx031_probe(struct i2c_client *client)
 			dev_err(&client->dev, "failed to get MIPI lane configuration");
 			goto probe_error_media_entity_cleanup;
 		}
+	}
+
+	ret = isx031_identify_module(client);
+	if (ret) {
+		dev_err(&client->dev, "isx031 identify module failed");
+		return ret;
 	}
 
 	/* 1920x1536 default */
