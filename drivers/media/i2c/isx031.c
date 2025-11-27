@@ -544,7 +544,7 @@ static void isx031_update_pad_format(const struct isx031_mode *mode,
 	fmt->width = mode->width;
 	fmt->height = mode->height;
 	fmt->code = mode->code;
-	fmt->field = V4L2_FIELD_NONE;
+	fmt->field = V4L2_FIELD_ANY;
 }
 
 static int isx031_get_num_lane(struct isx031 *isx031, struct device *dev)
