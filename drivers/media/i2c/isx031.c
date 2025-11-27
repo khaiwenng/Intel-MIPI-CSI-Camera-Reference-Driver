@@ -23,6 +23,11 @@
 #endif
 #define to_isx031(_sd)			container_of(_sd, struct isx031, sd)
 
+#define ISX031_OTP_TYPE_NAME_L		0x7E8A
+#define ISX031_OTP_TYPE_NAME_H		0x7E8B
+#define ISX031_OTP_TYPE_NAME_H_FIELD	0x0F
+#define ISX031_OTP_MODULE_ID_L		0x031
+
 #define ISX031_REG_MODE_SET_F		0x8A01
 #define ISX031_MODE_STANDBY		0x00
 #define ISX031_MODE_STREAMING		0x80
@@ -65,13 +70,13 @@ struct isx031_link_freq_config {
 	const struct isx031_reg_list reg_list;
 };
 
-struct isx031_driver_mode {
+struct isx031_drive_mode {
 	int lanes;
 	int fps;
 	int mode;
 };
 
-static const struct isx031_driver_mode isx031_driver_modes[] = {
+static const struct isx031_drive_mode isx031_drive_modes[] = {
 	{ 4, 60, ISX031_MODE_4LANES_60FPS },
 	{ 4, 30, ISX031_MODE_4LANES_30FPS },
 	{ 2, 30, ISX031_MODE_2LANES_30FPS },
@@ -240,6 +245,16 @@ static const struct isx031_reg_list isx031_1280_720_30fps_reg_list = {
 static const struct isx031_mode supported_modes[] = {
 	{
 		.width = 1920,
+		.height = 1536,
+		.code = MEDIA_BUS_FMT_UYVY8_1X16,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
+		.datatype = MIPI_CSI2_DT_YUV422_8B,
+#endif
+		.fps = 30,
+		.reg_list = isx031_1920_1536_30fps_reg_list,
+	},
+	{
+		.width = 1920,
 		.height = 1080,
 		.code = MEDIA_BUS_FMT_UYVY8_1X16,
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
@@ -258,22 +273,10 @@ static const struct isx031_mode supported_modes[] = {
 		.fps = 30,
 		.reg_list = isx031_1280_720_30fps_reg_list,
 	},
-	{
-		.width = 1920,
-		.height = 1536,
-		.code = MEDIA_BUS_FMT_UYVY8_1X16,
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
-		.datatype = MIPI_CSI2_DT_YUV422_8B,
-#endif
-		.fps = 30,
-		.reg_list = isx031_1920_1536_30fps_reg_list,
-	},
 };
 
-
-static int isx031_read_reg(struct isx031 *isx031, u16 reg, u16 len, u32 *val)
+static int isx031_read_reg(struct i2c_client *client, u16 reg, u16 len, u32 *val)
 {
-	struct i2c_client *client = isx031->client;
 	struct i2c_msg msgs[2];
 	u8 addr_buf[2];
 	u8 data_buf[4] = {0};
@@ -367,24 +370,24 @@ static int isx031_write_reg_list(struct isx031 *isx031,
 	return 0;
 }
 
-static int isx031_find_driver_mode(int lanes, int fps)
+static int isx031_find_drive_mode(int lanes, int fps)
 {
 	int i;
 
-	for (i = 0; i < ARRAY_SIZE(isx031_driver_modes); i++) {
-		if (isx031_driver_modes[i].lanes == lanes && isx031_driver_modes[i].fps == fps)
-			return isx031_driver_modes[i].mode;
+	for (i = 0; i < ARRAY_SIZE(isx031_drive_modes); i++) {
+		if (isx031_drive_modes[i].lanes == lanes && isx031_drive_modes[i].fps == fps)
+			return isx031_drive_modes[i].mode;
 	}
 
 	return -EINVAL;
 }
 
-static int isx031_set_driver_mode(struct isx031 *isx031)
+static int isx031_set_drive_mode(struct isx031 *isx031)
 {
 	int ret;
 	int mode;
 
-	mode = isx031_find_driver_mode(isx031->lanes, isx031->cur_mode->fps);
+	mode = isx031_find_drive_mode(isx031->lanes, isx031->cur_mode->fps);
 	if (mode < 0)
 		return mode;
 
@@ -407,7 +410,7 @@ static int isx031_mode_transit(struct isx031 *isx031, int state)
 
 	retry = 50;
 	while (retry--) {
-		ret = isx031_read_reg(isx031, ISX031_REG_SENSOR_STATE,
+		ret = isx031_read_reg(client, ISX031_REG_SENSOR_STATE,
 			      ISX031_REG_LEN_08BIT, &val);
 		if (ret == 0)
 			break;
@@ -415,13 +418,13 @@ static int isx031_mode_transit(struct isx031 *isx031, int state)
 	}
 	cur_mode = val;
 
-	/* Note: Ideally, driver mode should only be set if isx031->lanes != 0,
+	/* Note: Ideally, drive mode should only be set if isx031->lanes != 0,
 	 * which would mean the number of lanes is obtained from platform data.
-	 * Currently, driver mode is always set.
+	 * Currently, drive mode is always set.
 	 */
-	ret = isx031_set_driver_mode(isx031);
+	ret = isx031_set_drive_mode(isx031);
 	if (ret) {
-		dev_err(&client->dev, "failed to set driver mode");
+		dev_err(&client->dev, "failed to set drive mode");
 		return ret;
 	}
 
@@ -442,7 +445,7 @@ static int isx031_mode_transit(struct isx031 *isx031, int state)
 	/* streaming transit to standby need 1 frame+5ms */
 	retry = 50;
 	while (retry--) {
-		ret = isx031_read_reg(isx031, ISX031_REG_SENSOR_STATE,
+		ret = isx031_read_reg(client, ISX031_REG_SENSOR_STATE,
 				ISX031_REG_LEN_08BIT, &val);
 		if (ret == 0 && val == state)
 			break;
@@ -452,7 +455,7 @@ static int isx031_mode_transit(struct isx031 *isx031, int state)
 	return 0;
 }
 
-static int isx031_identify_module(struct isx031 *isx031)
+static int isx031_initialize_module(struct isx031 *isx031)
 {
 	struct i2c_client *client = isx031->client;
 	int ret;
@@ -460,7 +463,7 @@ static int isx031_identify_module(struct isx031 *isx031)
 	u32 val;
 
 	while (retry--) {
-		ret = isx031_read_reg(isx031, ISX031_REG_SENSOR_STATE,
+		ret = isx031_read_reg(client, ISX031_REG_SENSOR_STATE,
 			      ISX031_REG_LEN_08BIT, &val);
 		if (ret == 0)
 			break;
@@ -490,6 +493,49 @@ static int isx031_identify_module(struct isx031 *isx031)
 	}
 
 	return 0;
+}
+
+static int isx031_identify_module(struct i2c_client *client)
+{
+	u32 NAME_L = 0;
+	u32 NAME_H = 0;
+	int ret = 0;
+	int i = 0;
+	int retry = 50;
+
+	for (i = 0; i < retry; i++) {
+		ret = isx031_read_reg(client, ISX031_OTP_TYPE_NAME_L,
+				      ISX031_REG_LEN_08BIT, &NAME_L);
+		if (!ret)
+			break;
+	}
+
+	if (i == retry) {
+		dev_err(&client->dev, "isx031 read NAME_L failed");
+		return ret;
+	}
+
+	for (i = 0; i < retry; i++) {
+		ret = isx031_read_reg(client, ISX031_OTP_TYPE_NAME_H,
+				      ISX031_REG_LEN_08BIT, &NAME_H);
+		if (!ret)
+			break;
+	}
+
+	if (i == retry) {
+		dev_err(&client->dev, "isx031 read NAME_H failed");
+		return ret;
+	}
+
+	if (((NAME_H & ISX031_OTP_TYPE_NAME_H_FIELD) << 8 | NAME_L) !=
+	    ISX031_OTP_MODULE_ID_L) {
+		dev_err(&client->dev, "isx031 module id mismatch: 0x%4.4x\n",
+			((NAME_H & ISX031_OTP_TYPE_NAME_H_FIELD) << 8 |
+			 NAME_L));
+		return -ENODEV;
+	}
+
+	return ret;
 }
 
 static void isx031_update_pad_format(const struct isx031_mode *mode,
@@ -679,7 +725,13 @@ static int __maybe_unused isx031_resume(struct device *dev)
 		} while (ret != 0);
 	}
 
-	ret = isx031_identify_module(isx031);
+	ret = isx031_identify_module(isx031->client);
+	if (ret) {
+		dev_err(&client->dev, "isx031 identify module failed");
+		goto err_unlock;
+	}
+
+	ret = isx031_initialize_module(isx031);
 	if (ret == 0) {
 		reg_list = &isx031->cur_mode->reg_list;
 		ret = isx031_write_reg_list(isx031, reg_list, true);
@@ -688,7 +740,7 @@ static int __maybe_unused isx031_resume(struct device *dev)
 			goto err_unlock;
 		}
 	} else {
-		dev_err(&client->dev, "isx031 resume failed");
+		dev_err(&client->dev, "isx031 resume initialization failed");
 		goto err_unlock;
 	}
 	if (isx031->streaming) {
@@ -932,6 +984,12 @@ static int isx031_probe(struct i2c_client *client)
 	else
 		dev_info(&client->dev, "Reset GPIO found");
 
+	ret = isx031_identify_module(client);
+	if (ret) {
+		dev_err(&client->dev, "isx031 identify module failed");
+		return ret;
+	}
+
 	info = device_get_match_data(&client->dev);
 	if (info)
 		isx031->is_direct = info->is_direct;
@@ -970,13 +1028,7 @@ static int isx031_probe(struct i2c_client *client)
 		v4l2_subdev_init_finalize(&isx031->sd);
 	}
 
-	ret = isx031_identify_module(isx031);
-	if (ret) {
-		dev_err(&client->dev, "failed to find sensor: %d (I2C addr 0x%02x, bus %d)", ret, client->addr, client->adapter->nr);
-		return ret;
-	}
-
-	if (isx031->platform_data && isx031->platform_data->suffix)
+	if (isx031->platform_data && isx031->platform_data->suffix[0])
 		snprintf(isx031->sd.name, sizeof(isx031->sd.name), "isx031 %s",
 			 isx031->platform_data->suffix);
 
@@ -993,16 +1045,21 @@ static int isx031_probe(struct i2c_client *client)
 	}
 
 	/* 1920x1536 default */
-	isx031->cur_mode = NULL;
-	isx031->pre_mode = &supported_modes[0];
-	reg_list = &isx031->pre_mode->reg_list;
+	isx031->pre_mode = NULL;
+	isx031->cur_mode = &supported_modes[0];
+	ret = isx031_initialize_module(isx031);
+	if (ret) {
+		dev_err(&client->dev, "failed to initialize sensor: %d", ret);
+		return ret;
+	}
+	reg_list = &isx031->cur_mode->reg_list;
 	ret = isx031_write_reg_list(isx031, reg_list, true);
 	if (ret) {
 		dev_err(&client->dev, "failed to apply preset mode");
 		goto probe_error_media_entity_cleanup;
 	}
+	isx031->pre_mode = isx031->cur_mode;
 
-	isx031->cur_mode = isx031->pre_mode;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 13, 0)
 	ret = v4l2_async_register_subdev_sensor_common(&isx031->sd);
 #else
