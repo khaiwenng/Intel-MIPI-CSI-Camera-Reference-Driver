@@ -1105,6 +1105,7 @@ static const struct isx031_info isx031_mipi_info = {
 };
 
 static const struct acpi_device_id isx031_acpi_ids[] = {
+	{ "INTC113C" },
 	{ "INTC3031", (kernel_ulong_t)&isx031_mipi_info },
 	{}
 };
