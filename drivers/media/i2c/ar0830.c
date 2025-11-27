@@ -18,7 +18,7 @@
 #include <linux/regmap.h>
 #include <linux/unaligned.h>
 
-#include "ar0830.h"
+#include "media/i2c/ar0830.h"
 
 static int ar0830_read_reg(struct ar0830 *ar0830, u16 reg, u16 len, u32 *val)
 {
