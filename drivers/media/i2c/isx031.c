@@ -39,10 +39,6 @@
 #define ISX031_REG_MODE_SET_F_LOCK	0xBEF0
 #define ISX031_MODE_UNLOCK		0x53
 
-struct isx031_info {
-	bool is_direct;
-};
-
 #define ISX031_REG_MODE_SELECT		0x8A00
 #define ISX031_MODE_4LANES_60FPS	0x01
 #define ISX031_MODE_4LANES_30FPS	0x17
@@ -83,51 +79,32 @@ static const struct isx031_drive_mode isx031_drive_modes[] = {
 };
 
 struct isx031_mode {
-	/* Frame width in pixels */
-	u32 width;
-
-	/* Frame height in pixels */
-	u32 height;
-
-	/* MEDIA_BUS_FMT */
-	u32 code;
-
+	u32 width;	/* Frame width in pixels */
+	u32 height;	/* Frame height in pixels */
+	u32 code;	/* MEDIA_BUS_FMT */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
-	/* CSI-2 data type ID */
-	u8 datatype;
+	u8 datatype;	/* CSI-2 data type ID */
 #endif
+	u32 fps;	/* MODE_FPS*/
 
-	/* MODE_FPS*/
-	u32 fps;
-
-	/* Sensor register settings for this resolution */
-	const struct isx031_reg_list reg_list;
+	const struct isx031_reg_list reg_list;	/* Sensor register settings for this resolution */
 };
 
 struct isx031 {
 	struct v4l2_subdev sd;
 	struct media_pad pad;
 
-	/* Current mode */
-	const struct isx031_mode *cur_mode;
-	/* Previous mode */
-	const struct isx031_mode *pre_mode;
+	const struct isx031_mode *cur_mode;	/* Current mode */
+	const struct isx031_mode *pre_mode;	/* Previous mode */
 	u8 lanes;
 
-	/* i2c client */
-	struct i2c_client *client;
-
+	struct i2c_client *client;	/* i2c client */
 	struct isx031_platform_data *platform_data;
 	struct gpio_desc *reset_gpio;
 	struct gpio_desc *fsin_gpio;
-
-	/* Streaming on/off */
-	bool streaming;
-
 	struct v4l2_ctrl_handler ctrls;
 
-	/* MIPI direct connection */
-	bool is_direct;
+	bool streaming;	/* Streaming on/off */
 };
 
 static const s64 isx031_link_frequencies[] = {
@@ -135,9 +112,9 @@ static const s64 isx031_link_frequencies[] = {
 };
 
 static const struct isx031_reg isx031_init_reg[] = {
-	{ISX031_REG_LEN_08BIT, 0xFFFF, 0x00}, // select mode
-	{ISX031_REG_LEN_08BIT, 0x0171, 0x00}, // close F_EBD
-	{ISX031_REG_LEN_08BIT, 0x0172, 0x00}, // close R_EBD
+	{ISX031_REG_LEN_08BIT, 0xFFFF, 0x00}, /* select mode */
+	{ISX031_REG_LEN_08BIT, 0x0171, 0x00}, /* close F_EBD */
+	{ISX031_REG_LEN_08BIT, 0x0172, 0x00}, /* close R_EBD */
 };
 
 static const struct isx031_reg isx031_framesync_reg[] = {
@@ -151,16 +128,16 @@ static const struct isx031_reg isx031_framesync_reg[] = {
 };
 
 static const struct isx031_reg isx031_1920_1536_30fps_reg[] = {
-	{ISX031_REG_LEN_08BIT, 0x8AA8, 0x01}, // crop enable
-	{ISX031_REG_LEN_08BIT, 0x8AAA, 0x80}, // H size = 1920
+	{ISX031_REG_LEN_08BIT, 0x8AA8, 0x01}, /* crop enable */
+	{ISX031_REG_LEN_08BIT, 0x8AAA, 0x80}, /* H size = 1920 */
 	{ISX031_REG_LEN_08BIT, 0x8AAB, 0x07},
-	{ISX031_REG_LEN_08BIT, 0x8AAC, 0x00}, // H croped 0
+	{ISX031_REG_LEN_08BIT, 0x8AAC, 0x00}, /* H croped 0 */
 	{ISX031_REG_LEN_08BIT, 0x8AAD, 0x00},
-	{ISX031_REG_LEN_08BIT, 0x8AAE, 0x00}, // V size 1536
+	{ISX031_REG_LEN_08BIT, 0x8AAE, 0x00}, /* V size 1536 */
 	{ISX031_REG_LEN_08BIT, 0x8AAF, 0x06},
-	{ISX031_REG_LEN_08BIT, 0x8AB0, 0x00}, // V cropped 0
+	{ISX031_REG_LEN_08BIT, 0x8AB0, 0x00}, /* V cropped 0 */
 	{ISX031_REG_LEN_08BIT, 0x8AB1, 0x00},
-	{ISX031_REG_LEN_08BIT, 0x8ADA, 0x03}, // DCROP_DATA_SEL
+	{ISX031_REG_LEN_08BIT, 0x8ADA, 0x03}, /* DCROP_DATA_SEL */
 	{ISX031_REG_LEN_08BIT, 0xBF04, 0x01},
 	{ISX031_REG_LEN_08BIT, 0xBF06, 0x80},
 	{ISX031_REG_LEN_08BIT, 0xBF07, 0x07},
@@ -173,16 +150,16 @@ static const struct isx031_reg isx031_1920_1536_30fps_reg[] = {
 };
 
 static const struct isx031_reg isx031_1920_1080_30fps_reg[] = {
-	{ISX031_REG_LEN_08BIT, 0x8AA8, 0x01}, // crop enable
-	{ISX031_REG_LEN_08BIT, 0x8AAA, 0x80}, // H size = 1920
+	{ISX031_REG_LEN_08BIT, 0x8AA8, 0x01}, /* crop enable */
+	{ISX031_REG_LEN_08BIT, 0x8AAA, 0x80}, /* H size = 1920 */
 	{ISX031_REG_LEN_08BIT, 0x8AAB, 0x07},
-	{ISX031_REG_LEN_08BIT, 0x8AAC, 0x00}, // H croped 0
+	{ISX031_REG_LEN_08BIT, 0x8AAC, 0x00}, /* H croped 0 */
 	{ISX031_REG_LEN_08BIT, 0x8AAD, 0x00},
-	{ISX031_REG_LEN_08BIT, 0x8AAE, 0x38}, // V size 1080
+	{ISX031_REG_LEN_08BIT, 0x8AAE, 0x38}, /* V size 1080 */
 	{ISX031_REG_LEN_08BIT, 0x8AAF, 0x04},
-	{ISX031_REG_LEN_08BIT, 0x8AB0, 0xE4}, // V cropped 228*2
+	{ISX031_REG_LEN_08BIT, 0x8AB0, 0xE4}, /* V cropped 228*2 */
 	{ISX031_REG_LEN_08BIT, 0x8AB1, 0x00},
-	{ISX031_REG_LEN_08BIT, 0x8ADA, 0x03}, // DCROP_DATA_SEL
+	{ISX031_REG_LEN_08BIT, 0x8ADA, 0x03}, /* DCROP_DATA_SEL */
 	{ISX031_REG_LEN_08BIT, 0xBF04, 0x01},
 	{ISX031_REG_LEN_08BIT, 0xBF06, 0x80},
 	{ISX031_REG_LEN_08BIT, 0xBF07, 0x07},
@@ -192,20 +169,19 @@ static const struct isx031_reg isx031_1920_1080_30fps_reg[] = {
 	{ISX031_REG_LEN_08BIT, 0xBF0B, 0x04},
 	{ISX031_REG_LEN_08BIT, 0xBF0C, 0xE4},
 	{ISX031_REG_LEN_08BIT, 0xBF0D, 0x00},
-
 };
 
 static const struct isx031_reg isx031_1280_720_30fps_reg[] = {
-	{ISX031_REG_LEN_08BIT, 0x8AA8, 0x01}, // crop enable
-	{ISX031_REG_LEN_08BIT, 0x8AAA, 0x00}, // H size = 1280
+	{ISX031_REG_LEN_08BIT, 0x8AA8, 0x01}, /* crop enable */
+	{ISX031_REG_LEN_08BIT, 0x8AAA, 0x00}, /* H size = 1280 */
 	{ISX031_REG_LEN_08BIT, 0x8AAB, 0x05},
-	{ISX031_REG_LEN_08BIT, 0x8AAC, 0x40}, // H croped 320*2
+	{ISX031_REG_LEN_08BIT, 0x8AAC, 0x40}, /* H croped 320*2 */
 	{ISX031_REG_LEN_08BIT, 0x8AAD, 0x01},
-	{ISX031_REG_LEN_08BIT, 0x8AAE, 0xD0}, // V size 720
+	{ISX031_REG_LEN_08BIT, 0x8AAE, 0xD0}, /* V size 720 */
 	{ISX031_REG_LEN_08BIT, 0x8AAF, 0x02},
-	{ISX031_REG_LEN_08BIT, 0x8AB0, 0x98}, // V cropped 408*2
+	{ISX031_REG_LEN_08BIT, 0x8AB0, 0x98}, /* V cropped 408*2 */
 	{ISX031_REG_LEN_08BIT, 0x8AB1, 0x01},
-	{ISX031_REG_LEN_08BIT, 0x8ADA, 0x03}, // DCROP_DATA_SEL
+	{ISX031_REG_LEN_08BIT, 0x8ADA, 0x03}, /* DCROP_DATA_SEL */
 	{ISX031_REG_LEN_08BIT, 0xBF04, 0x01},
 	{ISX031_REG_LEN_08BIT, 0xBF06, 0x00},
 	{ISX031_REG_LEN_08BIT, 0xBF07, 0x05},
@@ -462,6 +438,7 @@ static int isx031_initialize_module(struct isx031 *isx031)
 	int retry = 50;
 	u32 val;
 
+	/* read sensor current mode */
 	while (retry--) {
 		ret = isx031_read_reg(client, ISX031_REG_SENSOR_STATE,
 			      ISX031_REG_LEN_08BIT, &val);
@@ -604,12 +581,10 @@ static int isx031_start_streaming(struct isx031 *isx031)
 		dev_dbg(&client->dev, "same mode, skip write reg list");
 	}
 
-	if (isx031->is_direct) {
-		ret = __v4l2_ctrl_handler_setup(&isx031->ctrls);
-		if (ret) {
-			dev_err(&client->dev, "failed to setup ctrls");
-			return ret;
-		}
+	ret = __v4l2_ctrl_handler_setup(&isx031->ctrls);
+	if (ret) {
+		dev_err(&client->dev, "failed to setup ctrls");
+		return ret;
 	}
 
 	ret = isx031_mode_transit(isx031, ISX031_STATE_STREAMING);
@@ -959,7 +934,6 @@ static int isx031_probe(struct i2c_client *client)
 {
 	struct v4l2_subdev *sd;
 	struct isx031 *isx031;
-	const struct isx031_info *info;
 	const struct isx031_reg_list *reg_list;
 	int ret;
 
@@ -984,22 +958,15 @@ static int isx031_probe(struct i2c_client *client)
 	else
 		dev_info(&client->dev, "Reset GPIO found");
 
-	info = device_get_match_data(&client->dev);
-	if (info)
-		isx031->is_direct = info->is_direct;
-	else
-		isx031->is_direct = false;
-
 	/* initialize subdevice */
 	sd = &isx031->sd;
 	v4l2_i2c_subdev_init(sd, client, &isx031_subdev_ops);
-	if (isx031->is_direct) {
-		ret = isx031_ctrls_init(isx031);
-		if (ret) {
-			dev_err(&client->dev, "failed to init sensor ctrls: %d", ret);
-			return ret;
-		}
+	ret = isx031_ctrls_init(isx031);
+	if (ret) {
+		dev_err(&client->dev, "failed to init sensor ctrls: %d", ret);
+		return ret;
 	}
+
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 10, 0)
 	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE | V4L2_SUBDEV_FL_HAS_EVENTS;
 #else
@@ -1017,10 +984,8 @@ static int isx031_probe(struct i2c_client *client)
 		goto probe_error_v4l2_ctrl_handler_free;
 	}
 
-	if (isx031->is_direct) {
-		isx031->sd.state_lock = isx031->sd.ctrl_handler->lock;
-		v4l2_subdev_init_finalize(&isx031->sd);
-	}
+	isx031->sd.state_lock = isx031->sd.ctrl_handler->lock;
+	v4l2_subdev_init_finalize(&isx031->sd);
 
 	if (isx031->platform_data && isx031->platform_data->suffix[0])
 		snprintf(isx031->sd.name, sizeof(isx031->sd.name), "isx031 %s",
@@ -1100,13 +1065,8 @@ static const struct i2c_device_id isx031_id_table[] = {
 };
 MODULE_DEVICE_TABLE(i2c, isx031_id_table);
 
-static const struct isx031_info isx031_mipi_info = {
-    .is_direct = true,
-};
-
 static const struct acpi_device_id isx031_acpi_ids[] = {
 	{ "INTC113C" },
-	{ "INTC3031", (kernel_ulong_t)&isx031_mipi_info },
 	{}
 };
 
