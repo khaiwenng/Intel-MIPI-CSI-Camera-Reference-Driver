@@ -547,7 +547,7 @@ static void isx031_update_pad_format(const struct isx031_mode *mode,
 	fmt->field = V4L2_FIELD_NONE;
 }
 
-static int isx031_get_mipi_lane(struct isx031 *isx031, struct device *dev)
+static int isx031_get_num_lane(struct isx031 *isx031, struct device *dev)
 {
 	struct fwnode_handle *endpoint;
 	struct v4l2_fwnode_endpoint bus_cfg = {
@@ -1029,9 +1029,9 @@ static int isx031_probe(struct i2c_client *client)
 	if (isx031->platform_data && isx031->platform_data->lanes)
 		isx031->lanes = isx031->platform_data->lanes;
 
-	if (isx031->is_direct) {
-		/* mipi sensor read info from fwnode entrypoint bus cfg */
-		ret = isx031_get_mipi_lane(isx031, &client->dev);
+	else {
+		/* Read info from fwnode entrypoint bus cfg if no platform data */
+		ret = isx031_get_num_lane(isx031, &client->dev);
 		if (ret) {
 			dev_err(&client->dev, "failed to get MIPI lane configuration");
 			goto probe_error_media_entity_cleanup;
