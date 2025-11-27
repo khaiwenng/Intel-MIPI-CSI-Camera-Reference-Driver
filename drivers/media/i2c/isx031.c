@@ -43,6 +43,9 @@ struct isx031_info {
 #define ISX031_MODE_4LANES_30FPS	0x17
 #define ISX031_MODE_2LANES_30FPS	0x18
 
+/* To serialize asynchronus callbacks */
+static DEFINE_MUTEX(isx031_mutex);
+
 struct isx031_reg {
 	enum {
 		ISX031_REG_LEN_DELAY = 0,
@@ -105,9 +108,6 @@ struct isx031 {
 	/* Previous mode */
 	const struct isx031_mode *pre_mode;
 	u8 lanes;
-
-	/* To serialize asynchronous callbacks */
-	struct mutex mutex;
 
 	/* i2c client */
 	struct i2c_client *client;
@@ -591,13 +591,12 @@ static int isx031_set_stream(struct v4l2_subdev *sd, int enable)
 	if (isx031->streaming == enable)
 		return 0;
 
-	mutex_lock(&isx031->mutex);
+	mutex_lock(&isx031_mutex);
 	if (enable) {
 		ret = pm_runtime_get_sync(&client->dev);
 		if (ret < 0) {
 			pm_runtime_put_noidle(&client->dev);
-			mutex_unlock(&isx031->mutex);
-			return ret;
+			goto err_unlock;
 		}
 
 		ret = isx031_start_streaming(isx031);
@@ -613,7 +612,8 @@ static int isx031_set_stream(struct v4l2_subdev *sd, int enable)
 
 	isx031->streaming = enable;
 
-	mutex_unlock(&isx031->mutex);
+err_unlock:
+	mutex_unlock(&isx031_mutex);
 
 	return ret;
 }
@@ -638,11 +638,11 @@ static int __maybe_unused isx031_suspend(struct device *dev)
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct isx031 *isx031 = to_isx031(sd);
 
-	mutex_lock(&isx031->mutex);
+	mutex_lock(&isx031_mutex);
 	if (isx031->streaming)
 		isx031_stop_streaming(isx031);
 
-	mutex_unlock(&isx031->mutex);
+	mutex_unlock(&isx031_mutex);
 
 	/* Active low gpio reset, set 1 to power off sensor */
 	gpiod_set_value_cansleep(isx031->reset_gpio, 1);
@@ -656,7 +656,9 @@ static int __maybe_unused isx031_resume(struct device *dev)
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
 	struct isx031 *isx031 = to_isx031(sd);
 	const struct isx031_reg_list *reg_list;
-	int ret;
+	int ret = 0;
+
+	mutex_lock(&isx031_mutex);
 
 	int count = 0;
 
@@ -683,27 +685,25 @@ static int __maybe_unused isx031_resume(struct device *dev)
 		ret = isx031_write_reg_list(isx031, reg_list, true);
 		if (ret) {
 			dev_err(&client->dev, "resume: failed to apply cur mode");
-			return ret;
+			goto err_unlock;
 		}
 	} else {
 		dev_err(&client->dev, "isx031 resume failed");
-		return ret;
+		goto err_unlock;
 	}
-
-	mutex_lock(&isx031->mutex);
 	if (isx031->streaming) {
 		ret = isx031_start_streaming(isx031);
 		if (ret) {
 			isx031->streaming = false;
 			isx031_stop_streaming(isx031);
-			mutex_unlock(&isx031->mutex);
-			return ret;
+			goto err_unlock;
 		}
 	}
 
-	mutex_unlock(&isx031->mutex);
+err_unlock:
+	mutex_unlock(&isx031_mutex);
 
-	return 0;
+	return ret;
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
@@ -764,7 +764,7 @@ static int isx031_set_format(struct v4l2_subdev *sd,
 	if (i >= ARRAY_SIZE(supported_modes))
 		mode = &supported_modes[0];
 
-	mutex_lock(&isx031->mutex);
+	mutex_lock(&isx031_mutex);
 
 	isx031_update_pad_format(mode, &fmt->format);
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY) {
@@ -779,7 +779,7 @@ static int isx031_set_format(struct v4l2_subdev *sd,
 		isx031->cur_mode = mode;
 	}
 
-	mutex_unlock(&isx031->mutex);
+	mutex_unlock(&isx031_mutex);
 
 	return 0;
 }
@@ -794,7 +794,7 @@ static int isx031_get_format(struct v4l2_subdev *sd,
 {
 	struct isx031 *isx031 = to_isx031(sd);
 
-	mutex_lock(&isx031->mutex);
+	mutex_lock(&isx031_mutex);
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY)
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 14, 0)
 		fmt->format = *v4l2_subdev_get_try_format(&isx031->sd, cfg,
@@ -809,16 +809,14 @@ static int isx031_get_format(struct v4l2_subdev *sd,
 	else
 		isx031_update_pad_format(isx031->cur_mode, &fmt->format);
 
-	mutex_unlock(&isx031->mutex);
+	mutex_unlock(&isx031_mutex);
 
 	return 0;
 }
 
 static int isx031_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
-	struct isx031 *isx031 = to_isx031(sd);
-
-	mutex_lock(&isx031->mutex);
+	mutex_lock(&isx031_mutex);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 14, 0)
 	isx031_update_pad_format(&supported_modes[0],
 				 v4l2_subdev_get_try_format(sd, fh->pad, 0));
@@ -829,7 +827,7 @@ static int isx031_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 	isx031_update_pad_format(&supported_modes[0],
 				 v4l2_subdev_state_get_format(fh->state, 0));
 #endif
-	mutex_unlock(&isx031->mutex);
+	mutex_unlock(&isx031_mutex);
 
 	return 0;
 }
@@ -895,12 +893,10 @@ static void isx031_remove(struct i2c_client *client)
 #endif
 {
 	struct v4l2_subdev *sd = i2c_get_clientdata(client);
-	struct isx031 *isx031 = to_isx031(sd);
 
 	v4l2_async_unregister_subdev(sd);
 	media_entity_cleanup(&sd->entity);
 	pm_runtime_disable(&client->dev);
-	mutex_destroy(&isx031->mutex);
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(6, 1, 0)
 	return 0;
@@ -996,8 +992,6 @@ static int isx031_probe(struct i2c_client *client)
 		}
 	}
 
-	mutex_init(&isx031->mutex);
-
 	/* 1920x1536 default */
 	isx031->cur_mode = NULL;
 	isx031->pre_mode = &supported_modes[0];
@@ -1032,7 +1026,6 @@ static int isx031_probe(struct i2c_client *client)
 
 probe_error_media_entity_cleanup:
 	media_entity_cleanup(&isx031->sd.entity);
-	mutex_destroy(&isx031->mutex);
 
 probe_error_v4l2_ctrl_handler_free:
 	v4l2_ctrl_handler_free(isx031->sd.ctrl_handler);
