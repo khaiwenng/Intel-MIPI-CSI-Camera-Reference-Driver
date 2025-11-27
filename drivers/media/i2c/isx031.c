@@ -320,8 +320,24 @@ static int isx031_write_reg(struct isx031 *isx031, u16 reg, u16 len, u32 val)
 	return 0;
 }
 
+static int isx031_write_reg_retry(struct isx031 *isx031, u16 reg, u16 len, u32 val)
+{
+	int ret;
+	int retry = 100;
+
+	while (retry--) {
+		ret = isx031_write_reg(isx031, reg, len, val);
+		if (!ret)
+			break;
+		msleep(20);
+	}
+
+	return ret;
+}
+
 static int isx031_write_reg_list(struct isx031 *isx031,
-				 const struct isx031_reg_list *r_list)
+				 const struct isx031_reg_list *r_list,
+				 bool isRetry)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&isx031->sd);
 	unsigned int i;
@@ -332,9 +348,14 @@ static int isx031_write_reg_list(struct isx031 *isx031,
 			msleep(r_list->regs[i].val);
 			continue;
 		}
-		ret = isx031_write_reg(isx031, r_list->regs[i].address,
-				       ISX031_REG_LEN_08BIT,
-				       r_list->regs[i].val);
+		ret = isRetry ?
+			      isx031_write_reg_retry(isx031,
+						     r_list->regs[i].address,
+						     ISX031_REG_LEN_08BIT,
+						     r_list->regs[i].val) :
+			      isx031_write_reg(isx031, r_list->regs[i].address,
+					       ISX031_REG_LEN_08BIT,
+					       r_list->regs[i].val);
 		if (ret) {
 			dev_err_ratelimited(&client->dev,
 				"failed to write reg 0x%4.4x. error = %d",
@@ -367,8 +388,7 @@ static int isx031_set_driver_mode(struct isx031 *isx031)
 	if (mode < 0)
 		return mode;
 
-	ret = isx031_write_reg(isx031, ISX031_REG_MODE_SELECT, 1, mode);
-
+	ret = isx031_write_reg(isx031, ISX031_REG_MODE_SELECT, 1, (u32)mode);
 	return ret;
 }
 
@@ -458,11 +478,11 @@ static int isx031_identify_module(struct isx031 *isx031)
 			return ret;
 	}
 
-	ret = isx031_write_reg_list(isx031, &isx031_init_reg_list);
+	ret = isx031_write_reg_list(isx031, &isx031_init_reg_list, true);
 	if (ret)
 		return ret;
 	if (isx031->platform_data != NULL && !isx031->platform_data->irq_pin_flags) {
-		ret = isx031_write_reg_list(isx031, &isx031_framesync_reg_list);
+		ret = isx031_write_reg_list(isx031, &isx031_framesync_reg_list, false);
 		if (ret) {
 			dev_err(&client->dev, "failed in set framesync.");
 			return ret;
@@ -528,7 +548,7 @@ static int isx031_start_streaming(struct isx031 *isx031)
 
 	if (isx031->cur_mode != isx031->pre_mode) {
 		reg_list = &isx031->cur_mode->reg_list;
-		ret = isx031_write_reg_list(isx031, reg_list);
+		ret = isx031_write_reg_list(isx031, reg_list, true);
 		if (ret) {
 			dev_err(&client->dev, "failed to set stream mode");
 			return ret;
@@ -660,7 +680,7 @@ static int __maybe_unused isx031_resume(struct device *dev)
 	ret = isx031_identify_module(isx031);
 	if (ret == 0) {
 		reg_list = &isx031->cur_mode->reg_list;
-		ret = isx031_write_reg_list(isx031, reg_list);
+		ret = isx031_write_reg_list(isx031, reg_list, true);
 		if (ret) {
 			dev_err(&client->dev, "resume: failed to apply cur mode");
 			return ret;
@@ -982,7 +1002,7 @@ static int isx031_probe(struct i2c_client *client)
 	isx031->cur_mode = NULL;
 	isx031->pre_mode = &supported_modes[0];
 	reg_list = &isx031->pre_mode->reg_list;
-	ret = isx031_write_reg_list(isx031, reg_list);
+	ret = isx031_write_reg_list(isx031, reg_list, true);
 	if (ret) {
 		dev_err(&client->dev, "failed to apply preset mode");
 		goto probe_error_media_entity_cleanup;
