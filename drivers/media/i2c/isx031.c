@@ -280,6 +280,23 @@ static int isx031_read_reg(struct i2c_client *client, u16 reg, u16 len, u32 *val
 	return 0;
 }
 
+static int isx031_read_reg_state(struct i2c_client *client, u32 *val)
+{
+	int ret;
+	int i = 0;
+	int retry = 50;
+
+	for (i = 0; i < retry; i++) {
+		ret = isx031_read_reg(client, ISX031_REG_SENSOR_STATE,
+			      ISX031_REG_LEN_08BIT, val);
+		if (ret == 0)
+			break;
+		usleep_range(10000, 10500);
+	}
+
+	return ret;
+}
+
 static int isx031_write_reg(struct isx031 *isx031, u16 reg, u16 len, u32 val)
 {
 	struct i2c_client *client = isx031->client;
@@ -302,9 +319,10 @@ static int isx031_write_reg(struct isx031 *isx031, u16 reg, u16 len, u32 val)
 static int isx031_write_reg_retry(struct isx031 *isx031, u16 reg, u16 len, u32 val)
 {
 	int ret;
+	int i = 0;
 	int retry = 100;
 
-	while (retry--) {
+	for (i = 0; i < retry; i++) {
 		ret = isx031_write_reg(isx031, reg, len, val);
 		if (!ret)
 			break;
@@ -376,21 +394,17 @@ static int isx031_mode_transit(struct isx031 *isx031, int state)
 	struct i2c_client *client = isx031->client;
 	int ret;
 	int cur_mode, mode;
-	u32 val;
-	int retry = 50;
+	u32 val = 0;
 
 	if (state == ISX031_STATE_STARTUP)
 		mode = ISX031_MODE_STANDBY;
 	else if (state == ISX031_STATE_STREAMING)
 		mode = ISX031_MODE_STREAMING;
 
-	retry = 50;
-	while (retry--) {
-		ret = isx031_read_reg(client, ISX031_REG_SENSOR_STATE,
-			      ISX031_REG_LEN_08BIT, &val);
-		if (ret == 0)
-			break;
-		usleep_range(10000, 10500);
+	ret = isx031_read_reg_state(client, &val);
+	if (ret) {
+		dev_err(&client->dev, "failed to read sensor state");
+		return ret;
 	}
 	cur_mode = val;
 
@@ -410,6 +424,7 @@ static int isx031_mode_transit(struct isx031 *isx031, int state)
 		dev_err(&client->dev, "failed to unlock mode");
 		return ret;
 	}
+
 	ret = isx031_write_reg(isx031, ISX031_REG_MODE_SET_F, 1,
 			mode);
 	if (ret) {
@@ -419,13 +434,10 @@ static int isx031_mode_transit(struct isx031 *isx031, int state)
 	}
 
 	/* streaming transit to standby need 1 frame+5ms */
-	retry = 50;
-	while (retry--) {
-		ret = isx031_read_reg(client, ISX031_REG_SENSOR_STATE,
-				ISX031_REG_LEN_08BIT, &val);
-		if (ret == 0 && val == state)
-			break;
-		usleep_range(10000, 10500);
+	ret = isx031_read_reg_state(client, &val);
+	if (ret) {
+		dev_err(&client->dev, "failed to read sensor state");
+		return ret;
 	}
 
 	return 0;
@@ -435,20 +447,14 @@ static int isx031_initialize_module(struct isx031 *isx031)
 {
 	struct i2c_client *client = isx031->client;
 	int ret;
-	int retry = 50;
-	u32 val;
+	u32 val = 0;
 
 	/* read sensor current mode */
-	while (retry--) {
-		ret = isx031_read_reg(client, ISX031_REG_SENSOR_STATE,
-			      ISX031_REG_LEN_08BIT, &val);
-		if (ret == 0)
-			break;
-		usleep_range(100000, 100500);
-	}
-
-	if (ret)
+	ret = isx031_read_reg_state(client, &val);
+	if (ret) {
+		dev_err(&client->dev, "failed to read sensor state");
 		return ret;
+	}
 
 	dev_dbg(&client->dev, "sensor in mode 0x%x", val);
 
