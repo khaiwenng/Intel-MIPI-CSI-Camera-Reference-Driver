@@ -15,7 +15,7 @@ export CONFIG_VIDEO_ISX031=m
 obj-m += drivers/media/i2c/
 
 
-subdir-ccflags-y += -I$(src)/include/ 
+subdir-ccflags-y +=  -iquote $(src)/include/ -I$(src)/include/ 
 
 all:
 	$(MAKE) -C $(KERNEL_SRC) M=$(MODSRC) modules
