@@ -13,7 +13,7 @@
 #include <linux/string.h>
 #include <linux/workqueue.h>
 
-#include <media/ipu-bridge.h>
+#include "media/ipu-bridge.h"
 #include <media/v4l2-fwnode.h>
 
 #define ADEV_DEV(adev) ACPI_PTR(&((adev)->dev))
@@ -99,12 +99,12 @@ static const struct ipu_sensor_config ipu_supported_sensors[] = {
 	IPU_SENSOR_CONFIG("XMCC0003", 1, 321468000),
 	/* Lontium lt6911gxd */
 	IPU_SENSOR_CONFIG("INTC1124", 0),
-	/* D3 ISX031 */
-	IPU_SENSOR_CONFIG("INTC3031", 1, 300000000),
+	/* D3 Embedded ISX031 */
+	IPU_SENSOR_CONFIG("INTC113C", 1, 300000000),
 	/* LI AR0830 */
 	IPU_SENSOR_CONFIG("LIAR0830", 1, 600000000),
 	/* Innodisk AR0822 */
-	IPU_SENSOR_CONFIG("EV8MOOM1", 1, 360000000),
+	IPU_SENSOR_CONFIG("EV8MOOM1", 1, 360000000)
 };
 
 #if !IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
@@ -420,6 +420,7 @@ static void ipu_bridge_create_fwnode_properties(
 		bus_type = V4L2_FWNODE_BUS_TYPE_CSI2_CPHY;
 	else
 		bus_type = V4L2_FWNODE_BUS_TYPE_GUESS;
+
 	sensor->ep_properties[0] = PROPERTY_ENTRY_U32(
 					sensor->prop_names.bus_type,
 					bus_type);
@@ -805,7 +806,10 @@ static int ipu_bridge_connect_sensor(const struct ipu_sensor_config *cfg,
 		ipu_bridge_create_fwnode_properties(sensor, bridge, cfg);
 #if IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
 		ipu_bridge_create_connection_swnodes(bridge, sensor);
+
 		ret = software_node_register_node_group(sensor->group);
+		if (ret)
+			goto err_put_ivsc;
 #else
 		if (dummy) {
 			/* need adev to match the dummy port with the real one */
@@ -818,10 +822,9 @@ static int ipu_bridge_connect_sensor(const struct ipu_sensor_config *cfg,
 		} else {
 			ret = software_node_register_node_group(sensor->group);
 		}
-#endif
-
 		if (ret)
 			goto err_put_ivsc;
+#endif
 
 #if !IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
 		if (!dummy) {
