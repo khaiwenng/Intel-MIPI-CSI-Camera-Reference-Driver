@@ -2,49 +2,51 @@
 
 This document outlines the configuration parameters for Sensor AR0233, including validated settings and their compatibility across supported platforms. The table below summarizes the configurations that have been tested and verified, providing a reference for platform-specific implementation and integration.
 
-## Requirement for Kernel Compilation on Sensor
+## Patches required for ipu6-drivers Dkms build
 
-1. Download linux-intel-lts kernel from https://github.com/intel/linux-intel-lts:
-   - branch: `6.12/linux`
-   - tag: `lts-v6.12.36-linux-250711T071314Z`
-
-2. Apply patches below:
-   - `patch/v6.12/0001-serdes-add-fsin-gpio.patch`
-   - `patch/v6.12/0001-Configure-max9296-with-4-lanes-setting.patch`
-   - `patch/v6.12/0001-Add-driver-support-for-AR0820-sensor.patch`
-   
-   > **Note:** The AR0820 driver supports both AR0820 and AR0233 sensors thus need to apply these patches to enable streaming.
-
-3. Enable sensor compilation in `<kernel>/.config`
-   ```conf
-   CONFIG_VIDEO_AR0820=m
+1. Navigate to the ipu6-drivers directory:
+   ```bash
+   cd ipu6-drivers
    ```
+
+2. Apply the following patches from this repository:
+   ```bash
+   git am drivers.camera.scaling.sensor/patch/v6.12/0040-media-platform-intel-Add-AR0820-sensor-support-to-IPU.patch
+   git am drivers.camera.scaling.sensor/patch/v6.12/0041-media-i2c-max9x-Add-FSIN-GPIO-support-for-sensor-syn.patch
+   ```
+
+3. Build and install the DKMS modules:
+   - Refer to the main [README.md](../../README.md) for complete DKMS build and installation instructions.
+   
+   > **Important:** These patches were tested based on the validated system configuration listed below.
 
 #### For Sensor Type: GMSL
 
-1. Update new pdata serdes physical address into **PCA_00C003084()** in `<kernel>/drivers/media/i2c/max9x/serdes.c`
+1. MAX9295 Serializer Physical Address Configuration:
+   
+   The serializer address is configured in `ipu6-drivers/drivers/media/platform/intel/ipu-acpi-pdata.c`:
    ```c
-   struct max9x_pdata *ser_pdata = pdata_ser(dev, ser_sdinfo, "max9295", <Physical Address>, virt_addr);
+	serdes_sdinfo[i].ser_phys_addr = 0x40;
    ```
-| Vendor | Physical Address |
-|-----|-----|
-| Sensing | 0x40 |
 
-2. Update new sensor ISP's physical address into **PCA_AR0820()** in `<kernel>/drivers/media/i2c/max9x/serdes.c`
-    ```c
-    pdata_sensor(dev, &ser_pdata->subdevs[0], "ar0820", <Physical Address>, virt_addr);
-    ```
-| Vendor | Physical Address |
-|-----|-----|
-| Sensing | 0x6D |
+   | Vendor | Physical Address |
+   |--------|------ |
+   | Sensing | 0x40 |
+   
+2. Sensor ISP Physical Address Configuration:
+   
+   The sensor I2C address is defined in `ipu6-drivers/include/media/i2c/ar0820.h`:
+   ```c
+   #define AR0820_I2C_ADDRESS 0x6D  // Sensing ISP I2C Address is 0xDA >> 1
+   ```
 
- **Steps to apply the patch:**
- 1. Navigate to kernel source directory:
-    ```bash
-    cd linux-intel-lts/
-    ```
- 2. Apply the patch:
-    ```bash
-    git apply drivers.camera.scaling.sensor/patch/v6.12/0001-serdes-add-fsin-gpio.patch
-    ```
- 3. Recompile, install and reboot into the new kernel
+   | Sensor | Physical Address |
+   |--------|------------------|
+   | AR0820 | 0x6D |
+   | AR0233 | 0x6D |
+   
+   > **Note:** The AR0820 driver supports both AR0820 and AR0233 sensors, both using the same I2C address.
+
+## Validated with:
+   - Kernel version 6.12: [linux-intel-lts](https://github.com/intel/linux-intel-lts/tree/lts-v6.12.48-linux-250924T142248Z)
+   - IPU6 drivers: [ipu6-drivers](https://github.com/intel/ipu6-drivers/tree/iotg_ipu6) (commit `71e2e426`)

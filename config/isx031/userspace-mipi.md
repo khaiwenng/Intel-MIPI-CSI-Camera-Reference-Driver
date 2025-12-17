@@ -1,6 +1,6 @@
 ## Description
 
-This document details the configuration settings for the ISX031 MIPI CSI sensor, providing essential information for system integration. The table below presents the key parameters and their respective values used during system setup and validation.
+This document details the configuration settings for the ISX031 MIPI CSI-2 sensor, providing essential information for system integration. The table below presents the key parameters and their respective values used during system setup and validation.
 
 ## BIOS Configuration Table
 
@@ -27,7 +27,7 @@ This document details the configuration settings for the ISX031 MIPI CSI sensor,
 | | Camera1 Link Options | Camera2 Link Options |
 |----------|----------|----------|
 | Sensor Model | User Custom | User Custom |
-| Custom HID | INTC3031 | INTC3031 |
+| Custom HID | INTC113C | INTC113C |
 | Lanes Clock division | 4 4 2 2 | 4 4 2 2 |
 | CRD Version | CRD-D | CRD-D |
 | GPIO control | Control Logic 1 | Control Logic 2 |
@@ -73,7 +73,7 @@ This document details the configuration settings for the ISX031 MIPI CSI sensor,
 | | Camera1 Link Options | Camera2 Link Options |
 |----------|----------|----------|
 | Sensor Model | User Custom | User Custom |
-| Custom HID | INTC3031 | INTC3031 |
+| Custom HID | INTC113C | INTC113C |
 | Lanes Clock division | 4 4 2 2 | 4 4 2 2 |
 | CRD Version | CRD-D | CRD-D |
 | GPIO control | Control Logic 1 | Control Logic 2 |
@@ -124,7 +124,7 @@ This document details the configuration settings for the ISX031 MIPI CSI sensor,
 |----------|----------|----------|
 | Sensor Model | Custom Display Bridge | Custom Display Bridge |
 | Audio HID | _ | _ |
-| Custom HID | INTC3031 | INTC3031 |
+| Custom HID | INTC113C | INTC113C |
 | Lanes Clock division | 4 4 2 2 | 4 4 2 2 |
 | CRD Version | CRD-D | CRD-D |
 | GPIO control | Control Logic 1 | Control Logic 2 |
@@ -152,6 +152,8 @@ This document details the configuration settings for the ISX031 MIPI CSI sensor,
 | Customize Device ID Number | 18 | 18 |
 | Customize Device ID Number | 19 | 19 |
 | Flash Driver Selection | Disabled | Disabled |
+
+**Note:** CPHY-DPHY converter board required if using PTL CRB.
 
 ## Camera XML/JSON File Setup
 
@@ -184,7 +186,7 @@ This document details the configuration settings for the ISX031 MIPI CSI sensor,
 
 2. Append the new sensors into `/etc/camera/ipu75xa/libcamhal_configs.json`
    ```json
-   "availableSensors": ["existing-sensors","isx031-1-mipi-0","isx031-2-mipi-2"]
+   "availableSensors": ["...","isx031-1-mipi-0","isx031-2-mipi-2"]
    ```
 
 ## Sample Userspace Command
@@ -228,7 +230,7 @@ This document details the configuration settings for the ISX031 MIPI CSI sensor,
 
 | Number of Stream | IO Mode | FPS Result |
 |----------|----------|----------|
-| x1 | mmap | 30 |
-| x2 | mmap | 30 |
-| x1 | dma_mode | 30 |
-| x2 | dma_mode | 30 |
+| x1 | MMAP | 30 |
+| x2 | MMAP | 30 |
+| x1 | DMA MODE | 30 |
+| x2 | DMA MODE | 30 |

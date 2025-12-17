@@ -29,17 +29,21 @@ This document provides configuration details for **ar0830** sensor. The table be
 | Sensor Model | User Custom | User Custom|
 | Custom HID | LIAR0830 | LIAR0830 |
 | GPIO Control | Control Logic 1| Control Logic 2|
-| MIPI Port| 1 | 4 |
+| MIPI Port| 0 | 4 |
 | LaneUsed | x4 | x4 |
 | Num of I2C component | 1 | 1 |
 | I2C Address | 0x3c | 0x3c |
 
 ## XML file
 1. Import the files from ipu6/ below to `/etc/camera/ipu6epmtl/sensor`
+   - ar0830-1-mipi.xml
+   - ar0830-2-mipi.xml
+
+2. Rename the files to 
    - ar0830-1.xml
    - ar0830-2.xml
 
-2. Append the new sensors into `/etc/camera/ipu6epmtl/libcamhal_profile.xml`
+3. Append the new sensors into `/etc/camera/ipu6epmtl/libcamhal_profile.xml`
    ```xml
    <availableSensors value="...,ar0830-1-0,ar0830-2-4"/>
    ```
@@ -75,10 +79,14 @@ This document provides configuration details for **ar0830** sensor. The table be
 
 #### JSON file
 1. Import the files from ipu7/ below to `/etc/camera/ipu75xa/sensor`
+   - ar0830-1-mipi.json
+   - ar0830-2-mipi.json
+
+2. Rename the files to 
    - ar0830-1.json
    - ar0830-2.json
 
-2. Append the new sensors in `/etc/camera/ipu75xa/libcamhal_configs.json`
+3. Append the new sensors in `/etc/camera/ipu75xa/libcamhal_configs.json`
    ```
    "availableSensors": [ ...,"ar0830-1-0","ar0830-2-2"]"
    ```

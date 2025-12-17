@@ -16,7 +16,7 @@ This document details the configuration settings for the ISX031 GMSL sensor, pro
 | CRD Version | CRD-D | CRD-D |
 | GPIO control | No Control Logic | No Control Logic |
 | Camera position | Front | Back |
-| Flash Support | Driver default | Driver default |
+| Flash Support | Disabled | Disabled |
 | Privacy LED | Driver default | Driver default |
 | Rotation | 90 | 90 |
 | PPR Value | 2 | 2 |
@@ -36,7 +36,7 @@ This document details the configuration settings for the ISX031 GMSL sensor, pro
 | I2C Address | 44 | 44 |
 | Device Type | Sensor | Sensor |
 | Device 2 | | |
-| I2C Address | 40 | 40 |
+| I2C Address | 50 | 50 |
 | Device Type | Sensor | Sensor |
 | Customize Device ID List | | |
 | Customize Device ID Number | 17 | 17 |
@@ -54,7 +54,7 @@ This document details the configuration settings for the ISX031 GMSL sensor, pro
 | CRD Version | CRD-D | CRD-D |
 | GPIO control | No Control Logic | No Control Logic |
 | Camera position | Front | Back |
-| Flash Support | Driver default | Driver default |
+| Flash Support | Disabled | Disabled |
 | Privacy LED | Driver default | Driver default |
 | Rotation | 90 | 90 |
 | PPR Value | 2 | 2 |
@@ -74,7 +74,47 @@ This document details the configuration settings for the ISX031 GMSL sensor, pro
 | I2C Address | 44 | 44 |
 | Device Type | Sensor | Sensor |
 | Device 2 | | |
-| I2C Address | 40 | 40 |
+| I2C Address | 50 | 50 |
+| Device Type | Sensor | Sensor |
+| Customize Device ID List | | |
+| Customize Device ID Number | 17 | 17 |
+| Customize Device ID Number | 18 | 18 |
+| Customize Device ID Number | 19 | 19 |
+| Flash Driver Selection | Disabled | Disabled |
+
+#### IPU75XA Camera Link Options
+
+| | Camera1 Link options | Camera2 Link options |
+|----------|----------|----------|
+| Sensor Model | User Custom | User Custom |
+| Custom HID | INTC031M | INTC031M |
+| Lanes Clock division | 4 4 2 2 | 4 4 2 2 |
+| CRD Version | CRD-D | CRD-D |
+| GPIO control | No Control Logic | No Control Logic |
+| Camera position | Front | Back |
+| Flash Support | Disabled | Disabled |
+| Privacy LED | Driver default | Driver default |
+| Rotation | 180 | 0 |
+| Voltage Rail | | 3 voltage rail |
+| PhyConfiguration | CPHY | CPHY |
+| PPR Value | 2 | 2 |
+| PPR Unit | 4 | 4 |
+| Camera module name | _ | _ |
+| MIPI port | 0 | 2 |
+| LaneUsed | x4 | x4 |
+| MCLK | 19200000 | 19200000 |
+| EEPROM Type | ROM_NONE | ROM_NONE |
+| VCM Type | VCM_NONE | VCM_NONE |
+| Number of I2C Components | 3 | 3 |
+| I2C Channel | I2C1 | I2C2 |
+| Device 0 | | |
+| I2C Address | 27 | 27 |
+| Device Type | Sensor | Sensor |
+| Device 1 | | |
+| I2C Address | 44 | 44 |
+| Device Type | Sensor | Sensor |
+| Device 2 | | |
+| I2C Address | 54 | 54 |
 | Device Type | Sensor | Sensor |
 | Customize Device ID List | | |
 | Customize Device ID Number | 17 | 17 |
@@ -110,6 +150,15 @@ This document details the configuration settings for the ISX031 GMSL sensor, pro
    <availableSensors value="...,isx031-1-0,isx031-2-0,isx031-3-4,isx031-4-4"/>
    ```
 
+#### IPU75XA Configuration
+1. Import the files below to `/etc/camera/ipu75xa/sensor`
+   - isx031-1.json
+
+2. Append the new sensors into `/etc/camera/ipu75xa/libcamhal_configs.json`
+   ```json
+   "availableSensors": ["...","isx031-1-0"]
+   ```
+
 ## Sample Userspace Command
 
 #### Sensor Device Selection
@@ -132,6 +181,16 @@ This document details the configuration settings for the ISX031 GMSL sensor, pro
 
 **Note**: Refer to icamerasrc io-mode property for more sensor details.
 
+#### Sensor Resolution Selection
+| Resolution | Command Pipeline |
+|----------|----------|
+| 1920x1536 | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=isx031-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,**width=1920,height=1536**' ! glimagesink sync=false |
+
+#### Sensor Format Selection
+| Format | Command Pipeline |
+|----------|----------|
+| UYVY | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=isx031-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),**drm-format=UYVY**,width=1920,height=1536' ! glimagesink sync=false |
+
 #### Number of Stream (Single Stream / Multi Stream) Selection
 
 | Number of Stream | Command Pipeline |
@@ -145,6 +204,8 @@ This document details the configuration settings for the ISX031 GMSL sensor, pro
 | Number of Stream | IO Mode | FPS Result |
 |----------|----------|----------|
 | x1 | MMAP | 30 |
-| x1 | DMA MODE | 30 |
 | x2 | MMAP | 30 |
+| x4 | MMAP | 30 |
+| x1 | DMA MODE | 30 |
 | x2 | DMA MODE | 30 |
+| x4 | DMA MODE | 30 |

@@ -31,10 +31,5 @@ This document outlines the configuration parameters for Sensor AR0822, including
    CONFIG_VIDEO_AR0822=m
    ```
 
-### Ipu-Bridge changes
-1. Append line below into **ipu_supported_sensors[]** in `<kernel>/drivers/media/pci/intel/ipu-bridge.c`
-   ```xml
-   IPU_SENSOR_CONFIG("EV8MOOM1", 1, 360000000)
-   ```
 ### To enable continuous clock
 1. Add '#define CONT_CLK_ENABLE 1 in ar0822.c

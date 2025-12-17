@@ -36,7 +36,7 @@ This document details the configuration settings for the AR0820 GMSL sensor, pro
 | I2C Address                | 44                   |
 | Device Type                | Sensor               |
 | Device 2                   |                      |
-| I2C Address                | 40                   |
+| I2C Address                | 50                   |
 | Device Type                | Sensor               |
 | Customize Device ID List   |                      |
 | Customize Device ID Number | 17                   |
