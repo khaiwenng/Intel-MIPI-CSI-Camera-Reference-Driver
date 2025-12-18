@@ -11,6 +11,7 @@ export CONFIG_VIDEO_AR0820=m
 export CONFIG_VIDEO_AR0830=m
 export CONFIG_VIDEO_AR0234=m
 export CONFIG_VIDEO_ISX031=m
+export CONFIG_VIDEO_AR0822=m
 
 obj-m += drivers/media/i2c/
 

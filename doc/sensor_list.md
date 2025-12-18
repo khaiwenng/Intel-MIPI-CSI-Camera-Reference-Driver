@@ -13,3 +13,4 @@ This document maintains the list of enabled sensors.
 | ISX031 | MIPI CSI-2 | D3 Embedded | PTL | K6.17 | IPU7 |
 | ISX031 | GMSL | D3 Embedded | PTL | K6.17 | IPU7 |
 | ISX031 | GMSL | Leopard Imaging | PTL | K6.17 | IPU7 |
+| AR0822 | MIPI CSI-2 | Innodisk | PTL | K6.17 | IPU7 |

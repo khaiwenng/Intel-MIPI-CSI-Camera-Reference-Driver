@@ -1,6 +1,6 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 /*
- * drivers/media/i2c/ar0830.h
+ * include/media/i2c/ar0830.h
  *
  * Copyright (C) 2025 Intel Corporation
  *

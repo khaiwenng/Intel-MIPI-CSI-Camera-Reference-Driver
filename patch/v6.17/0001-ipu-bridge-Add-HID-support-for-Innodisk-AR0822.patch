@@ -1,0 +1,25 @@
+From c58a75a78e477ccd8559bbde371ccd9221cdc485 Mon Sep 17 00:00:00 2001
+From: "Lui, Jonathan" <jonathan.ming.jun.lui@intel.com>
+Date: Wed, 17 Dec 2025 17:07:55 +0800
+Subject: [PATCH] ipu-bridge: Add HID support for Innodisk AR0822
+
+Signed-off-by: Jonathan Lui <jonathan.ming.jun.lui@intel.com>
+---
+ drivers/media/pci/intel/ipu-bridge.c | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/drivers/media/pci/intel/ipu-bridge.c b/drivers/media/pci/intel/ipu-bridge.c
+index 3c947d1a487c..c0ab4a9bfbd6 100644
+--- a/drivers/media/pci/intel/ipu-bridge.c
++++ b/drivers/media/pci/intel/ipu-bridge.c
+@@ -97,6 +97,8 @@ static const struct ipu_sensor_config ipu_supported_sensors[] = {
+	IPU_SENSOR_CONFIG("XMCC0003", 1, 321468000),
+	/* Lontium lt6911gxd */
+	IPU_SENSOR_CONFIG("INTC1124", 0),
++	/* Innodisk AR0822 */
++	IPU_SENSOR_CONFIG("EV8MOOM1", 1, 360000000)
+ };
+
+ static const struct ipu_property_names prop_names = {
+--
+2.34.1
