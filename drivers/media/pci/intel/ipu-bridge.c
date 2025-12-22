@@ -105,7 +105,7 @@ static const struct ipu_sensor_config ipu_supported_sensors[] = {
 	/* LI AR0830 */
 	IPU_SENSOR_CONFIG("LIAR0830", 1, 600000000),
 	/* Innodisk AR0822 */
-	IPU_SENSOR_CONFIG("EV8MOOM1", 1, 360000000)
+	IPU_SENSOR_CONFIG("EV8MOOM1", 1, 600000000)
 };
 
 #if !IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)

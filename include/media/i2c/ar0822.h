@@ -24,7 +24,7 @@
 #define AR0822_ADV_HINF_MIPI_INTERNAL_LANE_CLK_CTL				AR0822_REG_32BIT(0x0085008C)
 #define AR0822_CHIP_ID					0x0265
 
-#define AR0822_LINK_FREQ_360MHZ			360000000ULL
+#define AR0822_LINK_FREQ_600MHZ			600000000ULL
 #define AR0822_COMMON_WIDTH				3840
 #define AR0822_COMMON_HEIGHT			2160
 #define AR0822_PIXEL_ARRAY_LEFT			320	// To-Do
@@ -167,7 +167,7 @@ struct ar0822_mode {
 };
 
 static const s64 link_freq_menu_items[] = {
-	AR0822_LINK_FREQ_360MHZ,
+	AR0822_LINK_FREQ_600MHZ,
 };
 
 static const struct ar0822_mode supported_modes[] = {
