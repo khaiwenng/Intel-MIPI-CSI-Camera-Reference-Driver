@@ -4,7 +4,6 @@ This document provides configuration details for the sensor below. The table bel
 
 ## AR0830 + AP1302 (Leopard Imaging)
 
-
 | Platform | Kernel Version |
 |----------|----------------|
 | MTL      | K6.12          |
@@ -25,7 +24,6 @@ This document provides configuration details for the sensor below. The table bel
 | Streaming FPS           | 15       |
 
 ### Ipu-Bridge changes
-
 This configuration has been tested with kernel version 6.12, tag: `https://github.com/intel/linux-intel-lts/tree/lts-v6.12.36-linux-250711T071314Z`.
 
 **Steps to apply the patch:**
@@ -38,3 +36,10 @@ This configuration has been tested with kernel version 6.12, tag: `https://githu
 >    git apply drivers.camera.scaling.sensor/patch/v6.12/0001-ar0830-Register-AR0830-HID-into-ipu-bridge.patch
 >    ```
 > 3. Recompile, install and reboot into the new kernel
+
+### AR030 Firmware
+Please obtain the firmware from your respective vendor. Copy said firmware without "<>" into /lib/firmware
+
+```bash
+cp <"firmware_file"> /lib/firmware
+```
