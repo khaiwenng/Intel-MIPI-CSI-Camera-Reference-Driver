@@ -18,7 +18,7 @@ This document details the configuration settings for the ISX031 GMSL sensor, pro
 | Camera position | Front | Back |
 | Flash Support | Driver default | Driver default |
 | Privacy LED | Driver default | Driver default |
-| Rotation | 0 | 0 |
+| Rotation | 90 | 90 |
 | PPR Value | 2 | 2 |
 | PPR Unit | 2 | 2 |
 | Camera module name | _ | _ |
@@ -56,7 +56,7 @@ This document details the configuration settings for the ISX031 GMSL sensor, pro
 | Camera position | Front | Back |
 | Flash Support | Driver default | Driver default |
 | Privacy LED | Driver default | Driver default |
-| Rotation | 0 | 0 |
+| Rotation | 90 | 90 |
 | PPR Value | 2 | 2 |
 | PPR Unit | 2 | 2 |
 | Camera module name | _ | _ |

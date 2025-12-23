@@ -18,7 +18,7 @@ This document details the configuration settings for the AR0820 GMSL sensor, pro
 | Camera position            | Front                |
 | Flash Support              | Driver default       |
 | Privacy LED                | Driver default       |
-| Rotation                   | 0                    |
+| Rotation                   | 90                   |
 | PPR Value                  | 4                    |
 | PPR Unit                   | 2                    |
 | Camera module name         |                      |
