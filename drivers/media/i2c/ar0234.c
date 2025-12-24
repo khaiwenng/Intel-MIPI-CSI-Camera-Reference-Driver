@@ -471,10 +471,14 @@ static int ar0234_set_ctrl(struct v4l2_ctrl *ctrl)
 		exposure_max = format->height + ctrl->val -
 			       AR0234_EXPOSURE_MAX_MARGIN;
 		exposure_def = format->height - AR0234_EXPOSURE_MAX_MARGIN;
-		__v4l2_ctrl_modify_range(ar0234->exposure,
+		ret = __v4l2_ctrl_modify_range(ar0234->exposure,
 					 ar0234->exposure->minimum,
 					 exposure_max, ar0234->exposure->step,
 					 exposure_def);
+		if (ret) {
+			dev_err(&client->dev, "Exposure ctrl range update failed");
+			return ret;
+		}
 	}
 
 	/* V4L2 controls values will be applied only when power is already up */

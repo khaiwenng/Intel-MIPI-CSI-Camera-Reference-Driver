@@ -393,7 +393,7 @@ static int isx031_mode_transit(struct isx031 *isx031, int state)
 {
 	struct i2c_client *client = isx031->client;
 	int ret;
-	int cur_mode, mode;
+	int cur_mode, mode = ISX031_MODE_STANDBY;
 	u32 val = 0;
 
 	if (state == ISX031_STATE_STARTUP)

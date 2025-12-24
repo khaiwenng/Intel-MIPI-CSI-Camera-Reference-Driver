@@ -279,7 +279,10 @@ static int ar0822_setup_mipi_dat_lane(struct ar0822 *ar0822, u32 num_lanes)
 
 static u64 get_pixel_rate(struct ar0822 *ar0822)
 {
-	return ar0822->cur_mode->width * ar0822->cur_mode->height * ar0822->cur_mode->fps * 16 / ar0822->cur_mode->lanes;
+	const struct ar0822_mode *m = ar0822->cur_mode;
+	u64 base = (u64)m->width * (u64)m->height * (u64)m->fps;
+
+	return mul_u64_u32_div(base, 16, m->lanes);
 }
 
 static int ar0822_set_ctrl(struct v4l2_ctrl *ctrl)
