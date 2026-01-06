@@ -40,6 +40,11 @@
 #if IS_ENABLED(CONFIG_VIDEO_ISX031)
 #include "media/i2c/isx031.h"
 #endif
+
+#if IS_ENABLED(CONFIG_VIDEO_AR0820)
+#include <media/i2c/ar0820.h>
+#endif
+
 static LIST_HEAD(devices);
 
 static struct ipu_camera_module_data *add_device_to_list(
@@ -74,14 +79,42 @@ static const struct ipu_acpi_devices supported_devices[] = {
 		.sensor_physical_addr = ISX031_I2C_ADDRESS,
 		.link_freq = 1600,
 		.ser_physical_addr = 0x40,
-		.ser_gpio = (struct gpiod_lookup)
-		{
-			.chip_hwnum = 0,
-			.con_id = "reset",
-			.flags = GPIO_ACTIVE_LOW,
+		.ser_gpio = {
+			{
+				.chip_hwnum = 0,
+				.con_id = "reset",
+				.flags = GPIO_ACTIVE_LOW,
+			},
 		},
 		.sensor_dt = MIPI_CSI2_TYPE_YUV422_8,
-	},	// D3 ISX031 HID
+	},	// ISX031 HID
+#endif
+#if IS_ENABLED(CONFIG_VIDEO_AR0820)
+	{ 
+		.hid_name = "AR0820",
+		.real_driver = AR0820_NAME,
+		.get_platform_data = get_sensor_pdata,
+		.priv_data = NULL,
+		.priv_size = 0,
+		.connect = TYPE_SERDES,
+		.serdes_name = "max9x",
+		.sensor_physical_addr = AR0820_I2C_ADDRESS,
+		.link_freq = 1600,
+		.ser_physical_addr = 0x40,
+		.ser_gpio = {
+			{
+				.chip_hwnum = 0,
+				.con_id = "reset",
+				.flags = GPIO_ACTIVE_LOW,
+			},
+			{
+				.chip_hwnum = 7,
+				.con_id = "fsin",
+				.flags = GPIO_ACTIVE_LOW,
+			},
+		},
+		.sensor_dt = MIPI_CSI2_TYPE_YUV422_8,
+	 },  // AR0820 HID
 #endif
 #endif
 };
@@ -108,6 +141,9 @@ static const struct acpi_device_id ipu_acpi_match[] = {
 #if IS_ENABLED(CONFIG_VIDEO_ISX031)
 	{ "INTC1031", 0 },	// ISX031 HID
 	{ "INTC031M", 0 },	// D3CMC68N-115-084 ISX031 HID
+#endif
+#if IS_ENABLED(CONFIG_VIDEO_AR0820)
+	{ "AR0820", 0 },    // AR0820 HID
 #endif
 	{},
 };
