@@ -17,6 +17,8 @@ This document maintains the list of enabled sensors.
 | ISX031        | GMSL        | Leopard Imaging | K6.12          | IPU6EP      |
 | ISX031        | GMSL        | Leopard Imaging | K6.17          | IPU75XA     |
 
-IPU6 assumes ADL, RPL, ASL, TWL
-IPU6EP assumes ARL, MTL
-IPU75XA assumes PTL
+IPU6 represents ADL, RPL, ASL, TWL
+
+IPU6EP represents ARL, MTL
+
+IPU75XA represents PTL
