@@ -62,10 +62,11 @@ This document provides configuration details for **ar0234** sensor. The table be
    ```xml
    <availableSensors value="...,ar0234-1-0"/>
    ```
+
 3. AR0234 is a raw sensor, therefore it has dependencies on these files below. They can be installed and deployed from https://github.com/intel/ipu6-camera-hal.
    - /etc/camera/ipu6epmtl/AR0234_TGL_10bits.aiqb
    - /etc/camera/ipu6epmtl/gcss/graph_settings_ar0234.xml
- 
+
 #### Sensor Device Selection
 
 | MIPI Port | Device Name |
@@ -73,6 +74,18 @@ This document provides configuration details for **ar0234** sensor. The table be
 | CRD1 | ar0234-1 |
 
 ## Sample UserSpace Command
+
+1. PSYS library requires superuser to access, therefore please login as root to run the sample command sample given below.
+
+2. Please also make sure the following commands are run or included in /root/.bashrc:
+   ```bash
+   export DISPLAY=:0; xhost +
+   export GST_PLUGIN_PATH=/usr/lib/gstreamer-1.0
+   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib
+   export LIBVA_DRIVER_NAME=iHD
+   export GST_GL_API=gles2
+   export GST_GL_PLATFORM=egl
+   ```
 
 | Number of Stream | Command Pipeline |
 |----------|----------|
