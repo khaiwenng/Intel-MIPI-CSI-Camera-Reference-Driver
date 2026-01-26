@@ -24,7 +24,8 @@ int get_sensor_pdata(struct device *dev,
 			const char *serdes_name,
 			const char *hid_name,
 			int sensor_physical_addr,
-			int link_freq);
+			int link_freq,
+			int ser_physical_addr);
 
 struct ipu_isys_subdev_pdata *get_acpi_subdev_pdata(void);
 
@@ -91,4 +92,7 @@ struct serdes_local {
 
 	/* counter for total deser connected */
 	unsigned int deser_num;
+
+	/* serializer physical addr */
+	unsigned short ser_phys_addr;
 };

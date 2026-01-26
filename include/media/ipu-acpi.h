@@ -233,13 +233,15 @@ struct ipu_acpi_devices {
 				 const char *serdes_name,
 				 const char *hid_name,
 				 int sensor_physical_addr,
-				 int link_freq);
+				 int link_freq,
+				 int ser_physical_addr);
 	void *priv_data;
 	size_t priv_size;
 	enum connection_type connect;
 	const char *serdes_name;
 	int sensor_physical_addr;
 	int link_freq; /* in mbps */
+	int ser_physical_addr;
 };
 
 #endif

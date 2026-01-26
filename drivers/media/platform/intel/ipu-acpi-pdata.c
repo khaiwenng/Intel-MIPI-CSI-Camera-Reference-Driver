@@ -637,8 +637,8 @@ static int set_serdes_subdev(struct ipu_isys_subdev_info **serdes_sd,
 		serdes_sdinfo[i].phy_i2c_addr = serdes_info.phy_i2c_addr;
 		snprintf(serdes_sdinfo[i].suffix, sizeof(serdes_sdinfo[i].suffix), "%c-%d",
 			 SUFFIX_BASE + i, port);
+		serdes_sdinfo[i].ser_phys_addr = serdes_info.ser_phys_addr;
 #if IS_ENABLED(CONFIG_VIDEO_ISX031)
-		serdes_sdinfo[i].ser_phys_addr = 0x40;
 		serdes_sdinfo[i].sensor_dt = 0x1e;
 #endif
 	}
@@ -723,7 +723,8 @@ static int set_pdata(struct ipu_isys_subdev_info **sensor_sd,
 static void set_serdes_info(struct device *dev, const char *sensor_name,
 			    const char *serdes_name,
 			    struct sensor_bios_data *cam_data,
-			    int sensor_physical_addr)
+			    int sensor_physical_addr,
+			    int ser_physical_addr)
 {
 	int i;
 
@@ -737,6 +738,8 @@ static void set_serdes_info(struct device *dev, const char *sensor_name,
 	i = 1;
 	/* serializer mapped addr */
 	serdes_info.ser_map_addr = cam_data->i2c[i++].addr;
+	/* serializer physical addr */
+	serdes_info.ser_phys_addr = ser_physical_addr;
 	/* sensor mapped addr */
 	serdes_info.sensor_map_addr = cam_data->i2c[i++].addr;
 
@@ -754,7 +757,8 @@ static int populate_sensor_pdata(struct device *dev,
 			const char *serdes_name,
 			const char *hid_name,
 			int sensor_physical_addr,
-			int link_freq)
+			int link_freq,
+			int ser_physical_addr)
 {
 	int ret;
 
@@ -806,7 +810,7 @@ static int populate_sensor_pdata(struct device *dev,
 		}
 
 		/* local serdes info */
-		set_serdes_info(dev, sensor_name, serdes_name, cam_data, sensor_physical_addr);
+		set_serdes_info(dev, sensor_name, serdes_name, cam_data, sensor_physical_addr, ser_physical_addr);
 	}
 
 	/* Use last I2C device */
@@ -828,7 +832,7 @@ int get_sensor_pdata(struct device *dev,
 			void *priv, size_t size,
 			enum connection_type connect, const char *sensor_name,
 			const char *serdes_name, const char *hid_name,
-			int sensor_physical_addr, int link_freq)
+			int sensor_physical_addr, int link_freq, int ser_physical_addr)
 {
 	struct sensor_bios_data *cam_data;
 	struct control_logic_data *ctl_data;
@@ -877,7 +881,7 @@ int get_sensor_pdata(struct device *dev,
 	/* populate pdata */
 	rval = populate_sensor_pdata(dev, &sensor_sd, cam_data, ctl_data,
 				     connect, sensor_name, serdes_name, hid_name,
-				     sensor_physical_addr, link_freq);
+				     sensor_physical_addr, link_freq, ser_physical_addr);
 	if (rval) {
 		kfree(sensor_sd);
 		kfree(cam_data);
