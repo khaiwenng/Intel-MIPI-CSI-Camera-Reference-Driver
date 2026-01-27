@@ -25,7 +25,8 @@ int get_sensor_pdata(struct device *dev,
 			const char *hid_name,
 			int sensor_physical_addr,
 			int link_freq,
-			int ser_physical_addr);
+			int ser_physical_addr,
+			const struct gpiod_lookup *ser_gpio);
 
 struct ipu_isys_subdev_pdata *get_acpi_subdev_pdata(void);
 
@@ -95,4 +96,8 @@ struct serdes_local {
 
 	/* serializer physical addr */
 	unsigned short ser_phys_addr;
+
+	/* serializer gpio */
+	struct gpiod_lookup ser_gpio[MAX_SER_GPIO_NUM];
+
 };

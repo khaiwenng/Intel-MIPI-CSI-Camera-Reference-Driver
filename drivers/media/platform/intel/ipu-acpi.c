@@ -61,7 +61,11 @@ static const struct ipu_acpi_devices supported_devices[] = {
 #if IS_ENABLED(CONFIG_VIDEO_MAX9X)
 #if IS_ENABLED(CONFIG_VIDEO_ISX031)
 	{ "INTC031M", ISX031_NAME, get_sensor_pdata, NULL, 0, TYPE_SERDES, "max9x",
-		ISX031_I2C_ADDRESS, 1600, 0x40 },	// D3 ISX031 HID
+		ISX031_I2C_ADDRESS, 1600, 0x40,
+		.ser_gpio = {
+			{ "", 0, "reset", GPIO_ACTIVE_LOW },
+		}
+	},	// D3 ISX031 HID
 #endif
 #endif
 };
@@ -119,7 +123,8 @@ static int ipu_acpi_get_pdata(struct device *dev, int index)
 		supported_devices[index].hid_name,
 		supported_devices[index].sensor_physical_addr,
 		supported_devices[index].link_freq,
-		supported_devices[index].ser_physical_addr);
+		supported_devices[index].ser_physical_addr,
+		supported_devices[index].ser_gpio);
 
 	if (rval)
 		return -EPROBE_DEFER;

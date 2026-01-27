@@ -22,6 +22,7 @@
 #include "ipu-isys.h"
 #else
 #include <linux/clkdev.h>
+#include <linux/gpio/machine.h>
 #include <linux/i2c.h>
 
 #include <media/v4l2-mediabus.h>
@@ -60,6 +61,7 @@ struct ipu_isys_subdev_pdata {
 #define MAX_ACPI_SENSOR_NUM	4
 #define MAX_ACPI_I2C_NUM	12
 #define MAX_ACPI_GPIO_NUM	12
+#define MAX_SER_GPIO_NUM	11
 
 #define GPIO_RESET		0x0
 #define GPIO_POWER_EN		0xb
@@ -234,7 +236,8 @@ struct ipu_acpi_devices {
 				 const char *hid_name,
 				 int sensor_physical_addr,
 				 int link_freq,
-				 int ser_physical_addr);
+				 int ser_physical_addr,
+				 const struct gpiod_lookup *ser_gpio);
 	void *priv_data;
 	size_t priv_size;
 	enum connection_type connect;
@@ -242,6 +245,7 @@ struct ipu_acpi_devices {
 	int sensor_physical_addr;
 	int link_freq; /* in mbps */
 	int ser_physical_addr;
+	struct gpiod_lookup ser_gpio[MAX_SER_GPIO_NUM];
 };
 
 #endif

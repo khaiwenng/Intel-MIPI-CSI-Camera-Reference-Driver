@@ -8,6 +8,8 @@
 #include <media/i2c/isx031.h>
 #endif
 
+#include <media/ipu-acpi.h>
+
 struct serdes_subdev_info {
 	struct i2c_board_info board_info;
 	int i2c_adapter_id;
@@ -17,6 +19,7 @@ struct serdes_subdev_info {
 	char suffix[5]; /* suffix for subdevs */
 	unsigned short ser_phys_addr;
 	unsigned int sensor_dt;
+	struct gpiod_lookup ser_gpio[MAX_SER_GPIO_NUM];
 };
 
 struct serdes_platform_data {
