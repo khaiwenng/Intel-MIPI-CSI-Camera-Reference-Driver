@@ -208,7 +208,7 @@ static int max9x_disable_translations(struct max9x_common *common);
 })
 
 static struct max9x_pdata *pdata_ser(struct device *dev, struct max9x_subdev_pdata *sdinfo, const char *name,
-				     unsigned int phys_addr, unsigned int virt_addr)
+				     unsigned int phys_addr, unsigned int virt_addr, struct gpiod_lookup *ser_gpio)
 {
 	struct max9x_pdata *pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
 
@@ -218,6 +218,7 @@ static struct max9x_pdata *pdata_ser(struct device *dev, struct max9x_subdev_pda
 	strscpy(sdinfo->board_info.type, name, I2C_NAME_SIZE);
 	sdinfo->board_info.addr = virt_addr;
 	sdinfo->phys_addr = pdata->phys_addr = phys_addr;
+	sdinfo->gpio = ser_gpio;
 
 	return pdata;
 }
@@ -237,9 +238,9 @@ static struct max9x_pdata *pdata_sensor(struct device *dev, struct max9x_subdev_
 static struct max9x_pdata *parse_ser_pdata(struct device *dev, const char *ser_name, char *suffix,
 					   unsigned int ser_nlanes, unsigned int phys_addr,
 					   unsigned int virt_addr, struct max9x_subdev_pdata *ser_sdinfo,
-					   unsigned int sensor_dt)
+					   unsigned int sensor_dt, struct gpiod_lookup *ser_gpio)
 {
-	struct max9x_pdata *ser_pdata = pdata_ser(dev, ser_sdinfo, ser_name, phys_addr, virt_addr);
+	struct max9x_pdata *ser_pdata = pdata_ser(dev, ser_sdinfo, ser_name, phys_addr, virt_addr, ser_gpio);
 	struct max9x_serial_link_pdata *ser_serial_link;
 	struct max9x_video_pipe_pdata *ser_video_pipe;
 
@@ -344,6 +345,7 @@ static void *parse_serdes_pdata(struct device *dev)
 		unsigned int sensor_phys_addr = serdes_sdinfo->phy_i2c_addr;
 		unsigned int lanes = serdes_pdata->ser_nlanes;
 		unsigned int dt = serdes_sdinfo->sensor_dt;
+		struct gpiod_lookup *ser_gpio = serdes_sdinfo->ser_gpio;
 
 		serial_link->link_id = serial_link_id;
 		serial_link->link_type = MAX9X_LINK_TYPE_GMSL2;
@@ -364,7 +366,7 @@ static void *parse_serdes_pdata(struct device *dev)
 		SET_CSI_MAP(des_video_pipe->maps, 2, 0, dt, video_pipe_id, dt, csi_port); /* YUV422 8-bit */
 
 		struct max9x_pdata *ser_pdata = parse_ser_pdata(dev, ser_name, serdes_sdinfo->suffix, lanes,
-								ser_phys_addr, ser_alias, ser_sdinfo, dt);
+								ser_phys_addr, ser_alias, ser_sdinfo, dt, ser_gpio);
 
 		parse_sensor_pdata(dev, sensor_name, serdes_sdinfo->suffix, lanes, sensor_phys_addr, sensor_alias,
 				   ser_sdinfo, ser_pdata);

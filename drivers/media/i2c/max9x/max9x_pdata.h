@@ -19,6 +19,8 @@ struct max9x_subdev_pdata {
 	unsigned int serial_link_id; // DES identify GMSL link/pipe id
 	struct i2c_board_info board_info;
 	unsigned short phys_addr; // Remap or translate subdev
+
+	struct gpiod_lookup *gpio; // SER only
 };
 
 struct max9x_serial_link_pdata {
