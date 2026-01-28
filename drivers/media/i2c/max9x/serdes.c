@@ -289,6 +289,9 @@ static void parse_sensor_pdata(struct device *dev, const char *sensor_name, char
 	ser_pdata->subdevs = devm_kzalloc(dev, ser_pdata->num_subdevs * sizeof(*ser_pdata->subdevs), GFP_KERNEL);
 	pdata_sensor(dev, &ser_pdata->subdevs[0], sensor_name, phys_addr, virt_addr);
 
+	/* Copy GPIO configuration from serializer to sensor subdev */
+	ser_pdata->subdevs[0].gpio = ser_sdinfo->gpio;
+
 	/* NOTE: i2c_dev_set_name() will prepend "i2c-" to this name */
 	char *dev_name = devm_kzalloc(dev, I2C_NAME_SIZE, GFP_KERNEL);
 
@@ -1824,14 +1827,19 @@ static int max9x_registered(struct v4l2_subdev *sd)
 					static struct gpiod_lookup_table sensor_gpios = {
 						.dev_id = "",
 						.table = {
-							GPIO_LOOKUP("", 0, "reset",
-								    GPIO_ACTIVE_LOW),
 							{}
 						},
 					};
 
+					int line = 0;
+					for (int i = 0; i < MAX_SER_GPIO_NUM; i++) {
+						if (subdev_pdata->gpio && subdev_pdata->gpio[i].con_id != NULL) {
+							sensor_gpios.table[line] = subdev_pdata->gpio[i];
+							sensor_gpios.table[line++].key = common->gpio_chip.label;
+							dev_dbg(dev, " Adding line %d as %s", i, subdev_pdata->gpio[i].con_id);
+						}
+					}
 					sensor_gpios.dev_id = dev_id;
-					sensor_gpios.table[0].key = common->gpio_chip.label;
 
 					gpiod_add_lookup_table(&sensor_gpios);
 
