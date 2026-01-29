@@ -70,6 +70,7 @@ struct ipu_isys_subdev_pdata {
 
 #define IPU_SPDATA_GPIO_NUM	4
 #define IPU_SPDATA_IRQ_PIN_NAME_LEN 16
+#define MAX_SUFFIX_LEN 5
 
 #define MIPI_CSI2_TYPE_YUV422_8 0x1e
 

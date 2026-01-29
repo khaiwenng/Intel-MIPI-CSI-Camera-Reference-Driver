@@ -105,7 +105,7 @@ struct isx031 {
 	struct v4l2_subdev sd;
 	struct v4l2_ctrl_handler ctrls;
 
-	struct isx031_platform_data *platform_data;
+	isx031_platform_data *platform_data;
 	struct i2c_client *client;
 
 	struct gpio_desc *reset_gpio;

@@ -1,5 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /* Copyright (C) 2023-2025 Intel Corporation */
+#ifndef MEDIA_INTEL_IPU_ACPI_PDATA_H
+#define MEDIA_INTEL_IPU_ACPI_PDATA_H
+
 #include <linux/interrupt.h>
 #include <media/ipu-acpi.h>
 #include <media/v4l2-mediabus.h>
@@ -40,7 +43,7 @@ struct sensor_platform_data {
 	char irq_pin_name[IPU_SPDATA_IRQ_PIN_NAME_LEN];
 	int reset_pin;
 	int detect_pin;
-	char suffix;
+	char suffix[MAX_SUFFIX_LEN];
 	int gpios[IPU_SPDATA_GPIO_NUM];
 };
 
@@ -104,3 +107,5 @@ struct serdes_local {
 	/* sensor data type */
 	unsigned int sensor_dt;
 };
+
+#endif

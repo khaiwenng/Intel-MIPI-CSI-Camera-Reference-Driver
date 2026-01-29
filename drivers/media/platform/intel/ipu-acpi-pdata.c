@@ -217,7 +217,7 @@ static void print_subdev(struct ipu_isys_subdev_info *sd)
 	pr_debug("\t\ti2c_slave_address \t= 0x%x", spdata->i2c_slave_address);
 	pr_debug("\t\tirq_pin \t\t= %d", spdata->irq_pin);
 	pr_debug("\t\tirq_pin_name \t\t= %s", spdata->irq_pin_name);
-	pr_debug("\t\tsuffix \t\t\t= %c", spdata->suffix);
+	pr_debug("\t\tsuffix \t\t\t= %s", spdata->suffix);
 	pr_debug("\t\treset_pin \t\t= %d", spdata->reset_pin);
 	pr_debug("\t\tdetect_pin \t\t= %d", spdata->detect_pin);
 
@@ -369,7 +369,7 @@ static void update_serdes_subdev(struct device *dev,
 		new_mpdata = new_sdinfo->board_info.platform_data;
 
 		if (!strcmp(old_sdinfo->board_info.type, new_sdinfo->board_info.type) &&
-			old_sdinfo->suffix == new_sdinfo->suffix) {
+			!strcmp(old_sdinfo->suffix, new_sdinfo->suffix)) {
 			update_short(dev, "SdInfo port", &old_sdinfo->rx_port,
 				new_sdinfo->rx_port);
 			update_short(dev, "SdInfo ser_alias", &old_sdinfo->ser_alias,
@@ -417,8 +417,8 @@ static int compare_subdev(struct device *dev,
 			new_pdata = (struct sensor_platform_data *)
 					new_subdev->i2c.board_info.platform_data;
 
-			if (old_pdata->suffix == new_pdata->suffix) {
-				dev_info(dev, "Found matching sensor : %s %c",
+			if (!strcmp(old_pdata->suffix, new_pdata->suffix)) {
+				dev_info(dev, "Found matching sensor : %s %s",
 					old_subdev->i2c.board_info.type,
 					old_pdata->suffix);
 				return 0;
@@ -493,7 +493,7 @@ static void update_pdata(struct device *dev,
 				acpi_pdata = (struct sensor_platform_data *)
 					acpi_subdev->i2c.board_info.platform_data;
 
-				dev_err(dev, "Pdata does not contain %s %c\n",
+				dev_err(dev, "Pdata does not contain %s %s\n",
 					acpi_subdev->i2c.board_info.type,
 					acpi_pdata->suffix);
 
@@ -682,7 +682,7 @@ static int set_pdata(struct ipu_isys_subdev_info **sensor_sd,
 		/* use ascii */
 		/* port for start from 0 */
 		if (port >= 0) {
-			pdata->suffix = port + SUFFIX_BASE;
+			snprintf(pdata->suffix, sizeof(pdata->suffix), "%s", port + SUFFIX_BASE);
 			pr_info("IPU ACPI: create %s on port %d",
 				sensor_name, port);
 		} else

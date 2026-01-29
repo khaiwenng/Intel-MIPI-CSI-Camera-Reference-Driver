@@ -33,6 +33,8 @@
 #include "serdes.h"
 #include "regmap-retry.h"
 
+#include "media/ipu-acpi-pdata.h"
+
 static const s64 max9x_op_sys_clock[] =  {
 	MAX9X_LINK_FREQ_MBPS_TO_HZ(2500),
 	MAX9X_LINK_FREQ_MBPS_TO_HZ(2400),
@@ -298,7 +300,7 @@ static void parse_sensor_pdata(struct device *dev, const char *sensor_name, char
 	snprintf(dev_name, I2C_NAME_SIZE, "%s %s", sensor_name, suffix);
 	ser_pdata->subdevs[0].board_info.dev_name = dev_name;
 
-	struct isx031_platform_data *sen_pdata = devm_kzalloc(dev, sizeof(*sen_pdata), GFP_KERNEL);
+	struct sensor_platform_data *sen_pdata = devm_kzalloc(dev, sizeof(*sen_pdata), GFP_KERNEL);
 
 	if (!sen_pdata)
 		return;

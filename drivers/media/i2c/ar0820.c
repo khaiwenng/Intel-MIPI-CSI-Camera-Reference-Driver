@@ -71,7 +71,7 @@ struct ar0820 {
         /* i2c client */
         struct i2c_client *client;
 
-        struct ar0820_platform_data *platform_data;
+        ar0820_platform_data *platform_data;
         struct gpio_desc *reset_gpio;
 	struct gpio_desc *fsin_gpio;
 
@@ -480,8 +480,8 @@ static int ar0820_probe(struct i2c_client *client)
                 return ret;
         }
 
-        if (ar0820->platform_data && ar0820->platform_data->suffix)
-                snprintf(ar0820->sd.name, sizeof(ar0820->sd.name), "ar0820 %c",
+        if (ar0820->platform_data && ar0820->platform_data->suffix[0])
+                snprintf(ar0820->sd.name, sizeof(ar0820->sd.name), "ar0820 %s",
                          ar0820->platform_data->suffix);
 
         mutex_init(&ar0820->mutex);

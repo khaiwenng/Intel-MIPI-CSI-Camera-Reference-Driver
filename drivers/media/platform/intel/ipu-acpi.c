@@ -37,6 +37,9 @@
 #include <media/ipu-acpi.h>
 #include <media/ipu-get-acpi.h>
 
+#if IS_ENABLED(CONFIG_VIDEO_ISX031)
+#include "media/i2c/isx031.h"
+#endif
 static LIST_HEAD(devices);
 
 static struct ipu_camera_module_data *add_device_to_list(
