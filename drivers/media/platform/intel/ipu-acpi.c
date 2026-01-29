@@ -108,6 +108,31 @@ static const struct ipu_acpi_devices supported_devices[] = {
 		},
 		.sensor_dt = MIPI_CSI2_TYPE_YUV422_8,
 	},
+	{
+		.hid_name = "INTC031S",
+		.real_driver = ISX031_NAME,
+		.get_platform_data = get_sensor_pdata,
+		.priv_data = NULL,
+		.priv_size = 0,
+		.connect = TYPE_SERDES,
+		.serdes_name = "max9x",
+		.sensor_physical_addr = ISX031_I2C_ADDRESS,
+		.link_freq = 1600,
+		.ser_physical_addr = 0x40,
+		.ser_gpio = {
+			{
+				.chip_hwnum = 0,
+				.con_id = "reset",
+				.flags = GPIO_ACTIVE_LOW,
+			},
+			{
+				.chip_hwnum = 7,
+				.con_id = "fsin",
+				.flags = GPIO_ACTIVE_LOW,
+			},
+		},
+		.sensor_dt = MIPI_CSI2_TYPE_YUV422_8,
+	},
 #endif
 #if IS_ENABLED(CONFIG_VIDEO_AR0820)
 	{ 
