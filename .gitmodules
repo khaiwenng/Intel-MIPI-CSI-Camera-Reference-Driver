@@ -2,3 +2,7 @@
 	path = ipu6-drivers
 	url = https://github.com/intel/ipu6-drivers.git
 	branch = iotg_ipu6
+[submodule "ipu7-drivers"]
+	path = ipu7-drivers
+	url = https://github.com/intel/ipu7-drivers
+	branch = main
