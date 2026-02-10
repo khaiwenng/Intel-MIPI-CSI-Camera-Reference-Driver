@@ -73,6 +73,7 @@ struct ipu_isys_subdev_pdata {
 #define MAX_SUFFIX_LEN 5
 
 #define MIPI_CSI2_TYPE_YUV422_8 0x1e
+#define MIPI_CSI2_TYPE_RAW10 	0x2b
 
 void set_built_in_pdata(struct ipu_isys_subdev_pdata *pdata);
 

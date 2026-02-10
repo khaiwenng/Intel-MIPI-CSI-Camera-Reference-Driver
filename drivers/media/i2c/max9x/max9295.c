@@ -152,6 +152,11 @@ static int max9295_gpio_direction_output(struct gpio_chip *chip, unsigned int of
 	// Disable remote control over SerDes link
 	val |= MAX9X_FIELD_PREP(MAX9295_GPIO_A_RX_EN_FIELD, 0U);
 
+	// Configure to push-pull 
+	regmap_update_bits(map, MAX9295_GPIO_B(offset),
+				MAX9295_GPIO_B_OUT_TYPE_FIELD,
+				MAX9X_FIELD_PREP(MAX9295_GPIO_B_OUT_TYPE_FIELD, 1U));
+
 	return regmap_update_bits(map, MAX9295_GPIO_A(offset), mask, val);
 }
 

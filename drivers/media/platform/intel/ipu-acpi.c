@@ -49,6 +49,10 @@
 #include <media/i2c/ar0233.h>
 #endif
 
+#if IS_ENABLED(CONFIG_VIDEO_AR0234)
+#include <media/i2c/ar0234.h>
+#endif
+
 static LIST_HEAD(devices);
 
 static struct ipu_camera_module_data *add_device_to_list(
@@ -217,6 +221,28 @@ static const struct ipu_acpi_devices supported_devices[] = {
 		.sensor_dt = MIPI_CSI2_TYPE_YUV422_8,
 	  },  // AR0233 HID
 #endif
+#if IS_ENABLED(CONFIG_VIDEO_AR0234)
+	{ 
+		.hid_name = "INTC0234",
+		.real_driver = AR0234_NAME,
+		.get_platform_data = get_sensor_pdata,
+		.priv_data = NULL,
+		.priv_size = 0,
+		.connect = TYPE_SERDES,
+		.serdes_name = "max9x",
+		.sensor_physical_addr = AR0234_I2C_ADDRESS,
+		.link_freq = 1200,
+		.ser_physical_addr = 0x40,
+		.ser_gpio = {
+			{
+				.chip_hwnum = 0,
+				.con_id = "reset",
+				.flags = GPIO_ACTIVE_LOW,
+			},
+		},
+		.sensor_dt = MIPI_CSI2_TYPE_RAW10,
+	},// AR0234 HID
+#endif
 #endif
 };
 
@@ -248,6 +274,9 @@ static const struct acpi_device_id ipu_acpi_match[] = {
 #endif
 #if IS_ENABLED(CONFIG_VIDEO_AR0233)
 	{ "AR0233", 0 },    // AR0233 HID
+#endif
+#if IS_ENABLED(CONFIG_VIDEO_AR0234)
+	{ "INTC0234", 0 },
 #endif
 	{},
 };
