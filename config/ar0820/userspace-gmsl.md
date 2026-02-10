@@ -44,16 +44,65 @@ This document details the configuration settings for the AR0820 GMSL sensor, pro
 | Customize Device ID Number | 19                   |
 | Flash Driver Selection     | Disabled             |
 
+#### IPU75XA Camera Link Options
+
+|                            | Camera1 Link options |
+|---                         |---                   |
+| Sensor Model               | User Custom          |
+| Custom HID                 | AR0820               |
+| Lanes Clock division       | 4 4 2 2              |
+| CRD Version                | CRD-D                |
+| GPIO control               | No Control Logic     |
+| Camera position            | Front                |
+| Flash Support              | Driver default       |
+| Privacy LED                | Driver default       |
+| Rotation                   | 180                  |
+| Voltage Rail               | 3 voltage rail       |
+| PhyConfiguration           | CPHY                 |
+| PPR Value                  | 2                    |
+| PPR Unit                   | 1                    |
+| Camera module name         |                      |
+| MIPI port                  | 0                    |
+| LaneUsed                   | x4                   |
+| MCLK                       | 19200000             |
+| EEPROM Type                | ROM_NONE             |
+| VCM Type                   | VCM_NONE             |
+| Number of I2C Components   | 3                    |
+| I2C Channel                | I2C1                 |
+| Device 0                   |                      |
+| I2C Address                | 27                   |
+| Device Type                | Sensor               |
+| Device 1                   |                      |
+| I2C Address                | 44                   |
+| Device Type                | Sensor               |
+| Device 2                   |                      |
+| I2C Address                | 54                   |
+| Device Type                | Sensor               |
+| Customize Device ID List   |                      |
+| Customize Device ID Number | 17                   |
+| Customize Device ID Number | 18                   |
+| Customize Device ID Number | 19                   |
+| Flash Driver Selection     | Disabled             |
+
 ## Camera XML File Setup
 
 #### IPU6EPMTL Configuration
 
 1. Import files below to `/etc/camera/ipu6epmtl/sensor`
-   - ar0820-1.xml
+   - ipu6/ar0820-1.xml
 
 2. Append new sensors into `/etc/camera/ipu6epmtl/libcamhal_profile.xml`
    ```xml
    <availableSensors value="...,ar0820-1-0"/>
+   ```
+
+#### IPU75XA Configuration
+1. Import the files below to `/etc/camera/ipu75xa/sensor`
+   - ipu7/ar0820-1.json
+
+2. Append the new sensors into `/etc/camera/ipu75xa/libcamhal_configs.json`
+   ```json
+   "availableSensors": ["...","ar0820-1-0"]
    ```
 
 ## Sample Userspace Command
