@@ -440,6 +440,9 @@ static int ar0820_probe(struct i2c_client *client)
                 dev_warn(&client->dev, "Reset GPIO not found");
         else {
                 dev_dbg(&client->dev, "Found reset GPIO");
+                gpiod_set_value_cansleep(ar0820->reset_gpio, 1);
+                msleep(500);
+                gpiod_set_value_cansleep(ar0820->reset_gpio, 0);
         }
 
         ar0820->fsin_gpio = devm_gpiod_get_optional(&client->dev, "fsin",
@@ -451,6 +454,9 @@ static int ar0820_probe(struct i2c_client *client)
                 dev_warn(&client->dev, "FSIN GPIO not found");
         else {
                 dev_dbg(&client->dev, "Found FSIN GPIO");
+                gpiod_set_value_cansleep(ar0820->fsin_gpio, 1);
+                msleep(500);
+                gpiod_set_value_cansleep(ar0820->fsin_gpio, 0);
         }
 	
         /* initialize subdevice */
