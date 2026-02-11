@@ -7,6 +7,7 @@ ccflags-y := -DDRIVER_VERSION_SUFFIX=\"${DRIVER_VERSION_SUFFIX}\"
 
 ccflags-y += -I$(src)/../../../$(KERNEL_VERSION)/include-overrides
 
+obj-$(CONFIG_VIDEO_AR0233) += ar0233.o
 obj-$(CONFIG_VIDEO_AR0234) += ar0234.o
 obj-$(CONFIG_VIDEO_AR0820) += ar0820.o
 obj-$(CONFIG_VIDEO_AR0830) += ar0830.o
