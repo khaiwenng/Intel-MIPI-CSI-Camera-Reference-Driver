@@ -55,11 +55,17 @@ ccflags-y := -I$(src)/include
 ifeq ($(KERNEL_EQ_6_17),1)
 # IPU7 driver configs
 export CONFIG_VIDEO_INTEL_IPU7=m
+export CONFIG_VIDEO_INTEL_IPU6=m
+export CONFIG_VIDEO_INTEL_IPU6_ISYS_RESET=y
 
 subdir-ccflags-y += -DCONFIG_VIDEO_INTEL_IPU7
+subdir-ccflags-y += -DCONFIG_VIDEO_INTEL_IPU6
 
 # Build IPU7 drivers from submodule
 obj-m += ipu7-drivers/drivers/media/pci/intel/ipu7/
+
+# Build IPU6 drivers from submodule
+obj-m += ipu6-drivers/drivers/media/pci/intel/ipu6/
 
 # Build V4L2 core module
 obj-m += 6.17.0/drivers/media/v4l2-core/
@@ -81,7 +87,7 @@ obj-y += drivers/media/platform/intel/
 obj-m += drivers/media/i2c/
 
 subdir-ccflags-y += $(subdir-ccflags-m)
-subdir-ccflags-y +=  -iquote $(src)/include/ -I$(src)/include/ -I$(src)/ipu6-drivers/include
+subdir-ccflags-y +=  -iquote $(src)/include/ -I$(src)/include/ -I$(src)/ipu6-drivers/include -I$(src)/ipu7-drivers/include
 
 all:
 	$(MAKE) -C $(KERNEL_SRC) M=$(MODSRC) modules
