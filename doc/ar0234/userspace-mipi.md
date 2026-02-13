@@ -1,98 +1,114 @@
-# Description
+## Description
 
-This document provides configuration details for **ar0234** sensor. The table below outlines key parameters and their corresponding values used in the system setup. 
+This document details the configuration settings for the AR0234 MIPI CSI-2 sensor, providing essential information for system integration. The table below presents the key parameters and their respective values used during system setup and validation.
 
 ## BIOS Configuration Table
 
-**Note:** No External Clock required.
+> **Note:** No External Clock required.
 
 #### IPU6EPMTL Control Logic
 
-| | Control Logic 1 | 
-|----------|----------|
-| Control Logic Type | Discrete |
-| Number of GPIOs | 1 |
-| Group Pad Number | 23 |
-| Group Number | D_E_F_V |
-| Com Number | COM0 |
-| Function | RESET |
-| Active Value | 1 |
-| Initial Value | 1 |
+|                            | Control Logic 1      | Control Logic 2      |
+|---                         |---                   | ---                  |
+| Control Logic Type         | Discrete             | Discrete             |
+| Number of GPIOs            | 1                    | 1                    |
+| Group Pad Number           | 23                   | 0                    |
+| Group Number               | D_E_F_V              | A_B_H_S              |
+| Com Number                 | COM0                 | COM3                 |
+| Function                   | RESET                | RESET                |
+| Active Value               | 1                    | 1                    |
+| Initial Value              | 1                    | 1                    |
 
 #### IPU6EPMTL Camera Link  Option
 
-|                            | Camera1 Link options |
-|---                         |---                   |
-| Sensor Model               | User Custom          |
-| Custom HID                 | INTC10C0             |
-| Lanes Clock division       | 4 4 2 2              |
-| CRD Version                | CRD-D                |
-| GPIO control               | Control Logic 1      |
-| Camera position            | Back                 |
-| Flash Support              | Enabled              |
-| Privacy LED                | Driver default       |
-| Rotation                   | 0                    |
-| PPR Value                  | 1                    |
-| PPR Unit                   | A                    |
-| Camera module name         | YHCE                 |
-| MIPI port                  | 0                    |
-| LaneUsed                   | x2                   |
-| MCLK                       | 19200000             |
-| EEPROM Type                | ROM_NONE             |
-| VCM Type                   | VCM_NONE             |
-| Number of I2C Components   | 1                    |
-| I2C Channel                | I2C1                 |
-| Device 0                   |                      |
-| I2C Address                | 10                   |
-| Device Type                | Sensor               |
-| Customize Device ID List   |                      |
-| Customize Device ID Number | 17                   |
-| Customize Device ID Number | 18                   |
-| Customize Device ID Number | 19                   |
-| Flash Driver Selection     | Disabled             |
+|                            | Camera1 Link options | Camera2 Link options |
+|---                         |---                   | ---                  |
+| Sensor Model               | User Custom          | User Custom          |
+| Custom HID                 | INTC10C0             | INTC10C0             |
+| Lanes Clock division       | 4 4 2 2              | 4 4 2 2              |
+| CRD Version                | CRD-D                | CRD-D                |
+| GPIO control               | Control Logic 1      | Control Logic 2      |
+| Camera position            | Front                | Back                 |
+| Flash Support              | Disabled             | Disabled             |
+| Privacy LED                | Driver default       | Driver default       |
+| Rotation                   | 0                    | 0                    |
+| PPR Value                  | 2                    | 2                    |
+| PPR Unit                   | 2                    | 2                    |
+| Camera module name         | _                    | _                    |
+| MIPI port                  | 0                    | 4                    |
+| LaneUsed                   | x2                   | x2                   |
+| MCLK                       | 19200000             | 19200000             |
+| EEPROM Type                | ROM_NONE             | ROM_NONE             |
+| VCM Type                   | VCM_NONE             | VCM_NONE             |
+| Number of I2C Components   | 1                    | 1                    |
+| I2C Channel                | I2C1                 | I2C0                 |
+| Device 0                   |                      |                      |
+| I2C Address                | 10                   | 10                   |
+| Device Type                | Sensor               | Sensor               |
+| Customize Device ID List   |                      |                      |
+| Customize Device ID Number | 17                   | 17                   |
+| Customize Device ID Number | 18                   | 18                   |
+| Customize Device ID Number | 19                   | 19                   |
+| Flash Driver Selection     | Disabled             | Disabled             |
 
 ## Camera XML File Setup
 
 ####  IPU6EPMTL Configuration
 
-1. Import the files from ipu6/ below to `/etc/camera/ipu6epmtl/sensor`
-   - ar0234-1-mipi.xml
+Replace target system with recommended [ipu6epmtl](../../config/ar0234/ipu6epmtl) setting
 
-2. Append the new sensors into `/etc/camera/ipu6epmtl/libcamhal_profile.xml`
-   ```xml
-   <availableSensors value="...,ar0234-1-mipi-0"/>
-   ```
+    sudo cp -r ../../config/ar0234/ipu6epmtl /etc/camera
 
-3. AR0234 is a raw sensor, therefore it has dependencies on these files below. They can be installed and deployed from https://github.com/intel/ipu6-camera-hal.
-   - /etc/camera/ipu6epmtl/AR0234_TGL_10bits.aiqb
-   - /etc/camera/ipu6epmtl/gcss/graph_settings_ar0234.xml
+## Camera Tuning File Setup
+
+#### IPU6EPMTL Configuration
+
+Import [AR0234_TGL_10bits.aiqb](https://github.com/intel/ipu6-camera-hal/blob/iotg_ipu6/config/linux/ipu6epmtl/AR0234_TGL_10bits.aiqb) into target system `/etc/camera/ipu6epmtl`
+
+## Sample Userspace Command
 
 #### Sensor Device Selection
 
-| MIPI Port | Device Name |
-|----------|----------|
-| CRD1 | ar0234-1 |
+| MIPI Port | Command Pipeline |
+|---|---|
+| CRD1 | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=ar0234-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=NV12,width=1280,height=960' ! glimagesink sync=false |
+| CRD2 | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=ar0234-2 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=NV12,width=1280,height=960' ! glimagesink sync=false |
 
-## Sample UserSpace Command
+> **Note**: Refer to icamerasrc device-name property for more sensor details.
 
-1. PSYS library requires superuser to access, therefore please login as root to run the sample command sample given below.
+#### Frame Buffer Memory Type (IO Mode) Selection
 
-2. Please also make sure the following commands are run or included in /root/.bashrc:
-   ```bash
-   export DISPLAY=:0; xhost +
-   export GST_PLUGIN_PATH=/usr/lib/gstreamer-1.0
-   export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib
-   export LIBVA_DRIVER_NAME=iHD
-   export GST_GL_API=gles2
-   export GST_GL_PLATFORM=egl
-   ```
+| IO Mode | Command Pipeline |
+|---|---|
+| USERPTR | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=ar0234-1 printfps=true io-mode=userptr ! 'video/x-raw,format=NV12,width=1280,height=960' ! glimagesink sync=false |
+| DMA MODE | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=ar0234-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=NV12,width=1280,height=960' ! glimagesink sync=false |
+
+> **Note**: Refer to icamerasrc io-mode property for more sensor details.
+
+#### Sensor Resolution Selection
+
+| Resolution | Command Pipeline |
+|---|---|
+| 1280x960 | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=ar0234-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=NV12,width=1280,height=960' ! glimagesink sync=false |
+
+#### Sensor Format Selection
+
+| Format | Command Pipeline |
+|---|---|
+| NV12 | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=ar0234-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=NV12,width=1280,height=960' ! glimagesink sync=false |
+
+#### Number of Stream (Single Stream / Multi Stream) Selection
 
 | Number of Stream | Command Pipeline |
-|----------|----------|
-| x1 | gst-launch-1.0 icamerasrc num-buffers=-1 printfps=true device-name=ar0234-1 io-mode=4 ! 'video/x-raw(memory:DMABuf), drm-format=NV12, width=1280, height=960' ! glimagesink sync=false |
+|---|---|
+| x1 | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=ar0234-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=NV12,width=1280,height=960' ! glimagesink sync=false |
+| x2 | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=ar0234-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=NV12,width=1280,height=960' ! glimagesink sync=false icamerasrc num-buffers=-1 scene-mode=normal device-name=ar0234-2 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=NV12,width=1280,height=960' ! glimagesink sync=false |
 
 #### FPS Result
 
-| Number of Stream | IO Mode | FPS Result |
-|----------|----------|----------|
-| x1 | DMA MODE | 30 |
+| Number of Stream | IO Mode  | FPS Result |
+|---               |---       |---         |
+| x1               | USERPTR  | 30         |
+| x1               | DMA MODE | 30         |
+| x2               | USERPTR  | 30         |
+| x2               | DMA MODE | 30         |
