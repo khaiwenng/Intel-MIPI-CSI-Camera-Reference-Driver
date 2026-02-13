@@ -19,7 +19,7 @@
     "Sensor": [
       {
         "name": "ar0233-1",
-        "description": "ar0233 as sensor.",
+        "description": "AR0233 GMSL Sensor 1",
         "MediaCtlConfig": [
           {
             "id":  0 ,

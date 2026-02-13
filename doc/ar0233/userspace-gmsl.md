@@ -4,7 +4,7 @@ This document details the configuration settings for the AR0233 GMSL sensor, pro
 
 ## BIOS Configuration Table
 
-**Note:** No External Clock required.
+> **Note:** No External Clock required.
 
 #### IPU6EPMTL Camera Option
 
@@ -88,63 +88,56 @@ This document details the configuration settings for the AR0233 GMSL sensor, pro
 
 #### IPU6EPMTL Configuration
 
-1. Import files below to `/etc/camera/ipu6epmtl/sensor`
-   - ipu6/ar0233-1.xml
+Replace target system with recommended [ipu6epmtl](../../config/ar0233/ipu6epmtl) setting
 
-2. Append new sensors into `/etc/camera/ipu6epmtl/libcamhal_profile.xml`
-   ```xml
-   <availableSensors value="...,ar0233-1-0"/>
-   ```
+    sudo cp -r ../../config/ar0233/ipu6epmtl /etc/camera
 
 #### IPU75XA Configuration
-1. Import the files below to `/etc/camera/ipu75xa/sensor`
-   - ipu7/ar0233-1.json
 
-2. Append the new sensors into `/etc/camera/ipu75xa/libcamhal_configs.json`
-   ```json
-   "availableSensors": ["...","ar0233-1-0"]
-   ```
+Replace target system with recommended [ipu75xa](../../config/ar0233/ipu75xa) setting
+
+    sudo cp -r ../../config/ar0233/ipu75xa /etc/camera
 
 ## Sample Userspace Command
 
 #### Sensor Device Selection
 
 | Sensor Number | Command Pipeline |
-|----------|----------|
-| 1 | gst-launch-1.0 icamerasrc num-buffers=-1 num-vc=1 scene-mode=normal device-name=**ar0233-1** printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1080' ! glimagesink sync=false |
+|---|---|
+| 1 | gst-launch-1.0 icamerasrc num-buffers=-1 num-vc=1 scene-mode=normal device-name=ar0233-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1080' ! glimagesink sync=false |
 
-**Note**: Refer to icamerasrc device-name property for more sensor details.
+> **Note**: Refer to icamerasrc device-name property for more sensor details.
 
 #### Frame Buffer Memory Type (IO Mode) Selection
 
 | IO Mode | Command Pipeline |
-|----------|----------|
-| MMAP | gst-launch-1.0 icamerasrc num-buffers=-1 num-vc=1 scene-mode=normal device-name=ar0233-1 printfps=true io-mode=**mmap** ! '**video/x-raw,format=UYVY**,width=1920,height=1080' ! glimagesink sync=false |
-| DMA MODE | gst-launch-1.0 icamerasrc num-buffers=-1 num-vc=1 scene-mode=normal device-name=ar0233-1 printfps=true io-mode=**dma_mode** ! '**video/x-raw(memory:DMABuf),drm-format=UYVY**,width=1920,height=1080' ! glimagesink sync=false |
+|---|---|
+| MMAP | gst-launch-1.0 icamerasrc num-buffers=-1 num-vc=1 scene-mode=normal device-name=ar0233-1 printfps=true io-mode=mmap ! 'video/x-raw,format=UYVY,width=1920,height=1080' ! glimagesink sync=false |
+| DMA MODE | gst-launch-1.0 icamerasrc num-buffers=-1 num-vc=1 scene-mode=normal device-name=ar0233-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1080' ! glimagesink sync=false |
 
-**Note**: Refer to icamerasrc io-mode property for more sensor details.
+> **Note**: Refer to icamerasrc io-mode property for more sensor details.
 
 #### Sensor Resolution Selection
 
 | Resolution | Command Pipeline |
-|----------|----------|
-| 1920x1080 | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=ar0233-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,**width=1920,height=1080**' ! glimagesink sync=false |
+|---|---|
+| 1920x1080 | gst-launch-1.0 icamerasrc num-buffers=-1 num-vc=1 scene-mode=normal device-name=ar0233-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1080' ! glimagesink sync=false |
 
 #### Sensor Format Selection
 
 | Format | Command Pipeline |
-|----------|----------|
-| UYVY | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=ar0233-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),**drm-format=UYVY**,width=1920,height=1080' ! glimagesink sync=false |
+|---|---|
+| UYVY | gst-launch-1.0 icamerasrc num-buffers=-1 num-vc=1 scene-mode=normal device-name=ar0233-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1080' ! glimagesink sync=false |
 
 #### Number of Stream (Single Stream / Multi Stream) Selection
 
 | Number of Stream | Command Pipeline |
-|----------|----------|
-| x1 | gst-launch-1.0 icamerasrc num-buffers=-1 **num-vc=1** scene-mode=normal device-name=**ar0233-1** printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1080' ! glimagesink sync=false |
+|---|---|
+| x1 | gst-launch-1.0 icamerasrc num-buffers=-1 num-vc=1 scene-mode=normal device-name=ar0233-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1080' ! glimagesink sync=false |
 
 #### FPS Result
 
-| Number of Stream | IO Mode | FPS Result |
-|----------|----------|----------|
-| x1 | MMAP | 30 |
-| x1 | DMA MODE | 30 |
+| Number of Stream | IO Mode  | FPS Result |
+|---               |---       |---         |
+| x1               | MMAP     | 30         |
+| x1               | DMA MODE | 30         |
