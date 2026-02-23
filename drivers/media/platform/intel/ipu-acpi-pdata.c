@@ -127,9 +127,7 @@ static void print_serdes_sdinfo(struct serdes_subdev_info *sdinfo)
 	pr_debug("\t\tboard_info.addr \t= 0x%x", sdinfo->board_info.addr);
 	pr_debug("\t\tser_gpio \t\t= ");
 	for (i = 0; i < MAX_SER_GPIO_NUM; i++) {
-		pr_debug("\t\t\t\t\tpin[%d] = %d", i, sdinfo->ser_gpio[i].chip_hwnum);
-		pr_debug("\t\t\t\t\tfunc[%d] = %s", i, sdinfo->ser_gpio[i].con_id);
-		pr_debug("\t\t\t\t\tflags[%d] = %lu", i, sdinfo->ser_gpio[i].flags);
+		pr_debug("\t\t\t\t\tpin[%d] = %d, func = %s, flags = %lu", i, sdinfo->ser_gpio[i].chip_hwnum, sdinfo->ser_gpio[i].con_id, sdinfo->ser_gpio[i].flags);
 	}
 	pr_debug("\t\tsensor_dt \t\t= %x", sdinfo->sensor_dt);
 
