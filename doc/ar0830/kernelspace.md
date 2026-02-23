@@ -1,31 +1,28 @@
 ## Description
 
-This document provides configuration details for the sensor below. The table below will show the validated configurations and on which platforms they are verified.
+This document outlines the configuration parameters for Sensor AR0830, including validated settings and their compatibility across supported platforms.
 
-## AR0830 + AP1302 (Leopard Imaging)
+This sensor might come with in-built ISP module, please verify with your respective vendor.
 
-| Platform | Kernel Version |
-|----------|----------------|
-| MTL      | K6.12          |
-| PTL      | K6.17          |
+   | Vendor             | Sensor           | ISP              |
+   |---                 |---               |---               |
+   | Sensing            | AR0830           | AP1302           |
 
+## Driver DKMS Build
 
-| Sensor Details      | Value         |
-|---------------------|--------------|
-| Sensor Model        | AR0830       |
-| Sensor Type         | MIPI Direct  |
-| ISP Model           | AP1302       |
+Build and install the DKMS modules according to [README.md](../../README.md)
 
-| Configuration Parameter | Value    |
-|-------------------------|----------|
-| Lane                    | 2/4      |
-| Resolution              | 3840x2160|
-| Format                  | UYVY     |
-| Streaming FPS           | 15       |
+## Sensor Kernel Configuration Verification
 
-### AR0830 Firmware
-Please obtain the firmware from your respective vendor. Copy said firmware without "<>" into /lib/firmware
+#### For Sensor Type: MIPI CSI-2
 
-```bash
-cp <"firmware_file"> /lib/firmware
-```
+1. Verify the line below in ipu_supported_sensors[] in `../../drivers/media/pci/intel/ipu-bridge.c`
+   ```c
+   IPU_SENSOR_CONFIG("LIAR0830", 1, 600000000)
+   ```
+
+2. Sensor ISP Physical Address Configuration:
+
+   | Vendor             | Physical Address |
+   |--------------------|------------------|
+   | Leopard Imaging    | 0x3C             |
