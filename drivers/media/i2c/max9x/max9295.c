@@ -33,6 +33,7 @@
 #include "regmap-retry.h"
 
 static const char *const max9295_gpio_chip_names[] = {
+	"MFP0",
 	"MFP1",
 	"MFP2",
 	"MFP3",
@@ -43,7 +44,6 @@ static const char *const max9295_gpio_chip_names[] = {
 	"MFP8",
 	"MFP9",
 	"MFP10",
-	"MFP11",
 };
 
 /* Declarations */
