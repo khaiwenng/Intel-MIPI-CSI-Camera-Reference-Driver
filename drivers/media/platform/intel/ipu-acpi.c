@@ -64,7 +64,8 @@ static const struct ipu_acpi_devices supported_devices[] = {
 		ISX031_I2C_ADDRESS, 1600, 0x40,
 		.ser_gpio = {
 			{ "", 0, "reset", GPIO_ACTIVE_LOW },
-		}
+		},
+		.sensor_dt = MIPI_CSI2_TYPE_YUV422_8,
 	},	// D3 ISX031 HID
 #endif
 #endif
@@ -124,7 +125,8 @@ static int ipu_acpi_get_pdata(struct device *dev, int index)
 		supported_devices[index].sensor_physical_addr,
 		supported_devices[index].link_freq,
 		supported_devices[index].ser_physical_addr,
-		supported_devices[index].ser_gpio);
+		supported_devices[index].ser_gpio,
+		supported_devices[index].sensor_dt);
 
 	if (rval)
 		return -EPROBE_DEFER;

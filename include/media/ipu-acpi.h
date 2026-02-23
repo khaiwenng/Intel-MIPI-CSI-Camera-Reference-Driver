@@ -71,6 +71,8 @@ struct ipu_isys_subdev_pdata {
 #define IPU_SPDATA_GPIO_NUM	4
 #define IPU_SPDATA_IRQ_PIN_NAME_LEN 16
 
+#define MIPI_CSI2_TYPE_YUV422_8 0x1e
+
 void set_built_in_pdata(struct ipu_isys_subdev_pdata *pdata);
 
 enum connection_type {
@@ -237,7 +239,8 @@ struct ipu_acpi_devices {
 				 int sensor_physical_addr,
 				 int link_freq,
 				 int ser_physical_addr,
-				 const struct gpiod_lookup *ser_gpio);
+				 const struct gpiod_lookup *ser_gpio,
+				 unsigned int sensor_dt);
 	void *priv_data;
 	size_t priv_size;
 	enum connection_type connect;
@@ -246,6 +249,7 @@ struct ipu_acpi_devices {
 	int link_freq; /* in mbps */
 	int ser_physical_addr;
 	struct gpiod_lookup ser_gpio[MAX_SER_GPIO_NUM];
+	unsigned int sensor_dt;
 };
 
 #endif
