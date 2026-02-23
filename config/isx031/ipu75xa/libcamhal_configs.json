@@ -22,6 +22,13 @@
         //  wf is world facing, and uf is user facing.
         "availableSensors": [
             "isx031-1-0",
+            "isx031-2-0",
+            "isx031-3-0",
+            "isx031-4-0",
+            "isx031-5-2",
+            "isx031-6-2",
+            "isx031-7-2",
+            "isx031-8-2",
             "isx031-1-mipi-0",
             "isx031-2-mipi-2"
         ],
