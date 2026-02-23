@@ -63,10 +63,22 @@ static const struct ipu_acpi_devices supported_devices[] = {
 
 #if IS_ENABLED(CONFIG_VIDEO_MAX9X)
 #if IS_ENABLED(CONFIG_VIDEO_ISX031)
-	{ "INTC031M", ISX031_NAME, get_sensor_pdata, NULL, 0, TYPE_SERDES, "max9x",
-		ISX031_I2C_ADDRESS, 1600, 0x40,
-		.ser_gpio = {
-			{ "", 0, "reset", GPIO_ACTIVE_LOW },
+	{ 
+		.hid_name = "INTC031M",
+		.real_driver = ISX031_NAME,
+		.get_platform_data = get_sensor_pdata,
+		.priv_data = NULL,
+		.priv_size = 0,
+		.connect = TYPE_SERDES,
+		.serdes_name = "max9x",
+		.sensor_physical_addr = ISX031_I2C_ADDRESS,
+		.link_freq = 1600,
+		.ser_physical_addr = 0x40,
+		.ser_gpio = (struct gpiod_lookup)
+		{
+			.chip_hwnum = 0,
+			.con_id = "reset",
+			.flags = GPIO_ACTIVE_LOW,
 		},
 		.sensor_dt = MIPI_CSI2_TYPE_YUV422_8,
 	},	// D3 ISX031 HID
