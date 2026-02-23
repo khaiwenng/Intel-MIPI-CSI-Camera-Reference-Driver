@@ -4,17 +4,40 @@ This repository contains reference drivers and configurations for Intel MIPI CSI
 
 ## Supported Sensors
 
-| Sensor Name     |Sensor Type | Vendor          | Kernel Version | IPU Version |
-|-----------------|------------|-----------------|----------------|-------------|
-| AR0233          | GMSL       | Sensing         | K6.12          | IPU6EPMTL   |
-| AR0234          | MIPI CSI-2 | D3 Embedded     | K6.12          | IPU6EPMTL   |
-| AR0820          | GMSL       | Sensing         | K6.12          | IPU6EPMTL   |
-| ISX031          | GMSL       | D3 Embedded     | K6.12          | IPU6EPMTL   |
-| ISX031          | GMSL       | Leopard Imaging | K6.12          | IPU6EPMTL   |
-| ISX031          | GMSL       | Sensing         | K6.12          | IPU6EPMTL   |
-| ISX031          | MIPI CSI-2 | D3 Embedded     | K6.12          | IPU6EPMTL   |
+| Sensor          |Sensor Type | Vendor          | IPU Version |
+|-----------------|------------|-----------------|-------------|
+| AR0233+GW5300   | GMSL       | Sensing         | IPU6EPMTL   |
+| AR0234          | GMSL       | D3 Embedded     | IPU6EPMTL   |
+| AR0234          | MIPI CSI-2 | D3 Embedded     | IPU6EPMTL   |
+| AR0820+GW5300   | GMSL       | Sensing         | IPU6EPMTL   |
+| AR0830+AP1302   | MIPI CSI-2 | Leopard Imaging | IPU6EPMTL   |
+| AR0830+AP1302   | MIPI CSI-2 | Leopard Imaging | IPU75XA     |
+| ISX031          | GMSL       | D3 Embedded     | IPU6EP      |
+| ISX031          | GMSL       | D3 Embedded     | IPU6EPMTL   |
+| ISX031          | GMSL       | D3 Embedded     | IPU75XA     |
+| ISX031          | GMSL       | Leopard Imaging | IPU6EP      |
+| ISX031          | GMSL       | Leopard Imaging | IPU6EPMTL   |
+| ISX031          | GMSL       | Leopard Imaging | IPU75XA     |
+| ISX031          | GMSL       | Sensing         | IPU6EP      |
+| ISX031          | GMSL       | Sensing         | IPU6EPMTL   |
+| ISX031          | MIPI CSI-2 | D3 Embedded     | IPU6EP      |
+| ISX031          | MIPI CSI-2 | D3 Embedded     | IPU6EPMTL   |
+| ISX031          | MIPI CSI-2 | D3 Embedded     | IPU75XA     |
+
+> **Note:** IPU6EP represents ADL, TWL, ASL and RPL platforms
 
 > **Note:** IPU6EPMTL represents MTL and ARL platforms
+
+> **Note:** IPU75XA represents PTL platforms
+
+## Supported Ubuntu and Kernel Version
+
+| IPU Version        | Ubuntu Version  | Kernel Version  |
+|--------------------|-----------------|-----------------|
+| IPU6EP / IPU6EPMTL | 24.04.4         | 6.12 Intel BKC  |
+|                    | 24.04.4         | 6.17 Canonical  |
+| IPU75XA            | 24.04.4         | 6.17 Canonical  |
+|                    | 24.04.4         | 6.17 Canonical  |
 
 ## Directory Structure
 
