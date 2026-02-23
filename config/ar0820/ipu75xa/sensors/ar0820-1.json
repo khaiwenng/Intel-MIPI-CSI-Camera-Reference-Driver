@@ -19,7 +19,7 @@
     "Sensor": [
       {
         "name": "ar0820-1",
-        "description": "ar0820 as sensor.",
+        "description": "AR0820 GMSL Sensor 1",
         "MediaCtlConfig": [
           {
             "id":  0 ,
