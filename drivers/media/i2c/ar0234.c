@@ -75,9 +75,10 @@
 
 #define to_ar0234(_sd)	container_of(_sd, struct ar0234, sd)
 
-struct ar0234_info {
-       bool is_direct;
-};
+#define AR0234_PM_MAX_RETRY	10
+#define AR0234_REG_SLEEP_200MS	200
+/* To serialize asynchronous callbacks */
+static DEFINE_MUTEX(ar0234_mutex);
 
 struct ar0234_reg_list {
 	u32 num_of_regs;
@@ -90,6 +91,9 @@ struct ar0234_mode {
 	u32 hts;
 	u32 vts_def;
 	u32 code;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
+	u8 datatype;
+#endif
 	/* Sensor register settings for this mode */
 	const struct ar0234_reg_list reg_list;
 };
@@ -438,6 +442,9 @@ static const struct ar0234_mode supported_modes[] = {
 		.hts = AR0234_HTS_DEFAULT,
 		.vts_def = AR0234_VTS_DEFAULT,
 		.code = MEDIA_BUS_FMT_SGRBG10_1X10,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
+		.datatype = MIPI_CSI2_DT_RAW10,
+#endif
 		.reg_list = {
 			.num_of_regs = ARRAY_SIZE(mode_1280x960_10bit_2lane),
 			.regs = mode_1280x960_10bit_2lane,
@@ -460,10 +467,10 @@ struct ar0234 {
 	struct regmap *regmap;
 	unsigned long link_freq_bitmap;
 	const struct ar0234_mode *cur_mode;
-	bool is_direct;
 	struct gpio_desc *reset_gpio;
 	ar0234_platform_data *platform_data;
 	u8 lanes;
+	bool streaming;
 };
 
 static int ar0234_set_ctrl(struct v4l2_ctrl *ctrl)
@@ -565,7 +572,6 @@ static int ar0234_init_controls(struct ar0234 *ar0234)
 	struct v4l2_fwnode_device_properties props;
 	struct v4l2_ctrl_handler *ctrl_hdlr;
 	s64 exposure_max, vblank_max, vblank_def, hblank;
-	u32 link_freq_size;
 	int ret;
 
 	ctrl_hdlr = &ar0234->ctrl_handler;
@@ -573,16 +579,13 @@ static int ar0234_init_controls(struct ar0234 *ar0234)
 	if (ret)
 		return ret;
 
-	if (ar0234->is_direct) {
-		link_freq_size = ARRAY_SIZE(link_freq_menu_items) - 1;
-		ar0234->link_freq = v4l2_ctrl_new_int_menu(ctrl_hdlr,
-							   &ar0234_ctrl_ops,
-							   V4L2_CID_LINK_FREQ,
-							   link_freq_size, 0,
-							   link_freq_menu_items);
-		if (ar0234->link_freq)
-			ar0234->link_freq->flags |= V4L2_CTRL_FLAG_READ_ONLY;
-	}
+	ar0234->link_freq = v4l2_ctrl_new_int_menu(ctrl_hdlr,
+							&ar0234_ctrl_ops,
+							V4L2_CID_LINK_FREQ,
+							ARRAY_SIZE(link_freq_menu_items) - 1, 0,
+							link_freq_menu_items);
+	if (ar0234->link_freq)
+		ar0234->link_freq->flags |= V4L2_CTRL_FLAG_READ_ONLY;
 
 	v4l2_ctrl_new_std(ctrl_hdlr, &ar0234_ctrl_ops, V4L2_CID_ANALOGUE_GAIN,
 			  AR0234_ANALOG_GAIN_MIN, AR0234_ANALOG_GAIN_MAX,
@@ -675,7 +678,7 @@ static int ar0234_get_num_lane(struct ar0234 *ar0234, struct device *dev)
 
 	/* Check the number of MIPI CSI2 data lanes */
 	if (bus_cfg.bus.mipi_csi2.num_data_lanes != 2) {
-		dev_err(dev, "only 2 or 4 data lanes are currently supported");
+		dev_err(dev, "only 2 data lanes are currently supported");
 		goto out_err;
 	}
 
@@ -693,10 +696,6 @@ static int ar0234_start_streaming(struct ar0234 *ar0234)
 	struct i2c_client *client = v4l2_get_subdevdata(&ar0234->sd);
 	const struct ar0234_reg_list *reg_list;
 	int ret;
-
-	ret = pm_runtime_resume_and_get(&client->dev);
-	if (ret < 0)
-		return ret;
 
 	/*
 	 * Setting 0x301A.bit[0] will initiate a reset sequence:
@@ -737,42 +736,53 @@ err_rpm_put:
 	return ret;
 }
 
-static int ar0234_stop_streaming(struct ar0234 *ar0234)
+static void ar0234_stop_streaming(struct ar0234 *ar0234)
 {
-	int ret;
 	struct i2c_client *client = v4l2_get_subdevdata(&ar0234->sd);
+	int ret;
 
 	ret = cci_write(ar0234->regmap, AR0234_REG_MODE_SELECT,
 			AR0234_MODE_STANDBY, NULL);
-	if (ret < 0)
-		dev_err(&client->dev, "failed to stop stream");
-
-	pm_runtime_put(&client->dev);
-	return ret;
+	if (ret)
+		dev_err(&client->dev, "failed to stop stream: %d", ret);
 }
 
 static int ar0234_set_stream(struct v4l2_subdev *sd, int enable)
 {
 	struct ar0234 *ar0234 = to_ar0234(sd);
-	struct v4l2_subdev_state *state;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	int ret = 0;
 
-	/* v4l2_subdev_lock_and_get_active_state is already called by v4l2-core
-	   in MIPI Direct mode */
-	if (!ar0234->is_direct)
-		state = v4l2_subdev_lock_and_get_active_state(sd);
+	mutex_lock(&ar0234_mutex);
 
-	if (enable)
+	if (ar0234->streaming == enable)
+		goto unlock;
+
+	if (enable) {
+		ret = pm_runtime_resume_and_get(&client->dev);
+		if (ret < 0)
+			goto unlock;
+
 		ret = ar0234_start_streaming(ar0234);
-	else
-		ret = ar0234_stop_streaming(ar0234);
+		if (ret) {
+			ar0234_stop_streaming(ar0234);
+			pm_runtime_put(&client->dev);
+			goto unlock;
+		}
+		ar0234->streaming = true;
+	}
+	else {
+		ar0234_stop_streaming(ar0234);
+		pm_runtime_put(&client->dev);
+		ar0234->streaming = false;
+	}
 
 	/* vflip and hflip cannot change during streaming */
 	__v4l2_ctrl_grab(ar0234->vflip, enable);
 	__v4l2_ctrl_grab(ar0234->hflip, enable);
 
-	if (!ar0234->is_direct)
-		v4l2_subdev_unlock_state(state);
+unlock:
+	mutex_unlock(&ar0234_mutex);
 
 	return ret;
 }
@@ -926,71 +936,39 @@ static int ar0234_disable_streams(struct v4l2_subdev *subdev,
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
-static unsigned int ar0234_mbus_code_to_mipi(u32 code)
-{
-        switch (code) {
-        case MEDIA_BUS_FMT_RGB565_1X16:
-                return MIPI_CSI2_DT_RGB565;
-        case MEDIA_BUS_FMT_RGB888_1X24:
-                return MIPI_CSI2_DT_RGB888;
-        case MEDIA_BUS_FMT_UYVY8_1X16:
-        case MEDIA_BUS_FMT_YUYV8_1X16:
-                return MIPI_CSI2_DT_YUV422_8B;
-        case MEDIA_BUS_FMT_SBGGR16_1X16:
-        case MEDIA_BUS_FMT_SGBRG16_1X16:
-        case MEDIA_BUS_FMT_SGRBG16_1X16:
-        case MEDIA_BUS_FMT_SRGGB16_1X16:
-                return MIPI_CSI2_DT_RAW16;
-        case MEDIA_BUS_FMT_SBGGR12_1X12:
-        case MEDIA_BUS_FMT_SGBRG12_1X12:
-        case MEDIA_BUS_FMT_SGRBG12_1X12:
-        case MEDIA_BUS_FMT_SRGGB12_1X12:
-                return MIPI_CSI2_DT_RAW12;
-        case MEDIA_BUS_FMT_SBGGR10_1X10:
-        case MEDIA_BUS_FMT_SGBRG10_1X10:
-        case MEDIA_BUS_FMT_SGRBG10_1X10:
-        case MEDIA_BUS_FMT_SRGGB10_1X10:
-                return MIPI_CSI2_DT_RAW10;
-        case MEDIA_BUS_FMT_SBGGR8_1X8:
-        case MEDIA_BUS_FMT_SGBRG8_1X8:
-        case MEDIA_BUS_FMT_SGRBG8_1X8:
-        case MEDIA_BUS_FMT_SRGGB8_1X8:
-                return MIPI_CSI2_DT_RAW8;
-        default:
-                /* return unavailable MIPI data type - 0x3f */
-                WARN_ON(1);
-                return 0x3f;
-        }
-}
-#endif
-
 static int ar0234_get_frame_desc(struct v4l2_subdev *sd,
         unsigned int pad, struct v4l2_mbus_frame_desc *desc)
 {
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
         struct ar0234 *ar0234 = to_ar0234(sd);
-#endif
+
+        desc->type = V4L2_MBUS_FRAME_DESC_TYPE_CSI2;
+        desc->num_entries = 0;
+		desc->entry[desc->num_entries].flags = V4L2_MBUS_FRAME_DESC_FL_LEN_MAX;
+		desc->entry[desc->num_entries].stream = 0;
+		desc->entry[desc->num_entries].pixelcode = ar0234->cur_mode->code;
+		desc->entry[desc->num_entries].length = 0;
+		desc->entry[desc->num_entries].bus.csi2.vc = 0;
+		desc->entry[desc->num_entries].bus.csi2.dt = ar0234->cur_mode->datatype;
+		desc->num_entries++;
+        return 0;
+}
+#else
+static int ar0234_get_frame_desc(struct v4l2_subdev *sd,
+        unsigned int pad, struct v4l2_mbus_frame_desc *desc)
+{
         unsigned int i;
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
-        desc->type = V4L2_MBUS_FRAME_DESC_TYPE_CSI2;
-#endif
         desc->num_entries = V4L2_FRAME_DESC_ENTRY_MAX;
 
         for (i = 0; i < desc->num_entries; i++) {
-                desc->entry[i].flags = 0;
-                desc->entry[i].pixelcode = MEDIA_BUS_FMT_FIXED;
-                desc->entry[i].length = 0;
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
-                desc->entry[i].stream = i;
-                desc->entry[i].bus.csi2.vc = i;
-                desc->entry[i].bus.csi2.dt = ar0234_mbus_code_to_mipi(ar0234->cur_mode->code);
-#endif
+                desc->entry[desc->num_entries].flags = 0;
+                desc->entry[desc->num_entries].pixelcode = MEDIA_BUS_FMT_FIXED;
+                desc->entry[desc->num_entries].length = 0;
         }
 
         return 0;
 }
-
+#endif
 
 static const struct v4l2_subdev_video_ops ar0234_video_ops = {
 	.s_stream = ar0234_set_stream,
@@ -1026,51 +1004,6 @@ static const struct v4l2_subdev_internal_ops ar0234_internal_ops = {
 	.init_state = ar0234_init_state,
 };
 
-static int ar0234_parse_fwnode(struct ar0234 *ar0234, struct device *dev)
-{
-	struct fwnode_handle *endpoint;
-	struct v4l2_fwnode_endpoint bus_cfg = {
-		.bus_type = V4L2_MBUS_CSI2_DPHY,
-	};
-	int ret;
-
-	endpoint =
-		fwnode_graph_get_endpoint_by_id(dev_fwnode(dev), 0, 0,
-						FWNODE_GRAPH_ENDPOINT_NEXT);
-	if (!endpoint) {
-		dev_err(dev, "endpoint node not found");
-		return -EPROBE_DEFER;
-	}
-
-	ret = v4l2_fwnode_endpoint_alloc_parse(endpoint, &bus_cfg);
-	if (ret) {
-		dev_err(dev, "parsing endpoint node failed");
-		goto out_err;
-	}
-
-	/* Check the number of MIPI CSI2 data lanes */
-	if (bus_cfg.bus.mipi_csi2.num_data_lanes != 2 &&
-	    bus_cfg.bus.mipi_csi2.num_data_lanes != 4) {
-		dev_err(dev, "only 2 or 4 data lanes are currently supported");
-		goto out_err;
-	}
-
-	if (ar0234->is_direct) {
-		ret = v4l2_link_freq_to_bitmap(dev, bus_cfg.link_frequencies,
-					       bus_cfg.nr_of_link_frequencies,
-					       link_freq_menu_items,
-					       ARRAY_SIZE(link_freq_menu_items),
-					       &ar0234->link_freq_bitmap);
-		if (ret)
-			goto out_err;
-	}
-
-out_err:
-	v4l2_fwnode_endpoint_free(&bus_cfg);
-	fwnode_handle_put(endpoint);
-	return ret;
-}
-
 static int ar0234_identify_module(struct ar0234 *ar0234)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&ar0234->sd);
@@ -1105,57 +1038,34 @@ static void ar0234_remove(struct i2c_client *client)
 
 static int ar0234_reset(struct gpio_desc *reset_gpio)
 {
-       int ret;
+	if (!IS_ERR_OR_NULL(reset_gpio)) {
+		gpiod_direction_output(reset_gpio, 0);
 
-       if (!IS_ERR_OR_NULL(reset_gpio)) {
+		gpiod_set_value_cansleep(reset_gpio, 1);
+		msleep(10);
 
-               gpiod_direction_output(reset_gpio, 0);
+		gpiod_set_value_cansleep(reset_gpio, 0);
+		msleep(10);
 
-               gpiod_set_value_cansleep(reset_gpio, 1);
-               msleep(10);
+		return 0;
+	}
 
-               gpiod_set_value_cansleep(reset_gpio, 0);
-               msleep(10);
-
-               usleep_range(2000000, 2000000 + 500);
-               return 0;
-       }
-
-       return -EINVAL;
+	return -EINVAL;
 }
 
 static int ar0234_probe(struct i2c_client *client)
 {
 	struct device *dev = &client->dev;
 	struct ar0234 *ar0234;
-	struct clk *xclk;
-	u32 xclk_freq;
-	struct ar0234_info *info;
 	int ret;
 
 	ar0234 = devm_kzalloc(&client->dev, sizeof(*ar0234), GFP_KERNEL);
 	if (!ar0234)
 		return -ENOMEM;
 
-	info = device_get_match_data(&client->dev);
-	if (info)
-		ar0234->is_direct = info->is_direct;
-	else
-		ar0234->is_direct = false;
-
-	if (!ar0234->is_direct) {
-		ar0234->platform_data = client->dev.platform_data;
-		if (ar0234->platform_data == NULL)
-			dev_warn(&client->dev, "no platform data provided\n");
-	}
-
-	dev_info(dev, "AR0234: is_direct=%d",ar0234->is_direct);
-
-	if (ar0234->is_direct) {
-		ret = ar0234_parse_fwnode(ar0234, dev);
-		if (ret)
-			return ret;
-	}
+	ar0234->platform_data = client->dev.platform_data;
+	if (!ar0234->platform_data)
+		dev_warn(&client->dev, "No platform data provided\n");
 
 	ar0234->regmap = devm_cci_regmap_init_i2c(client, 16);
 	if (IS_ERR(ar0234->regmap))
@@ -1164,32 +1074,15 @@ static int ar0234_probe(struct i2c_client *client)
 
 	v4l2_i2c_subdev_init(&ar0234->sd, client, &ar0234_subdev_ops);
 
-	if (ar0234->is_direct) {
-		xclk = devm_clk_get(dev, NULL);
-		if (IS_ERR(xclk)) {
-			if (PTR_ERR(xclk) != -EPROBE_DEFER)
-				dev_err(dev, "failed to get xclk %ld", PTR_ERR(xclk));
-			return PTR_ERR(xclk);
-		}
-
-		xclk_freq = clk_get_rate(xclk);
-		if (xclk_freq != AR0234_XCLK_FREQ) {
-			dev_err(dev, "xclk frequency not supported: %d Hz", xclk_freq);
-			return -EINVAL;
-		}
-	}
+	ar0234->reset_gpio = devm_gpiod_get_optional(&client->dev, "reset",
+							GPIOD_ASIS);
+	if (IS_ERR(ar0234->reset_gpio))
+		return -EPROBE_DEFER;
+	else if (ar0234->reset_gpio == NULL)
+		dev_warn(&client->dev, "Reset GPIO not found");
 	else {
-		ar0234->reset_gpio = devm_gpiod_get_optional(&client->dev, "reset",
-								GPIOD_ASIS);
-
-		if (IS_ERR(ar0234->reset_gpio))
-			return -EPROBE_DEFER;
-		else if (ar0234->reset_gpio == NULL)
-			dev_warn(&client->dev, "Reset GPIO not found");
-		else {
-			dev_dbg(&client->dev, "Found reset GPIO");
-			ar0234_reset(ar0234->reset_gpio);
-		}
+		dev_dbg(&client->dev, "Found reset GPIO");
+		ar0234_reset(ar0234->reset_gpio);
 	}
 
 	/* Check module identity */
@@ -1219,7 +1112,6 @@ static int ar0234_probe(struct i2c_client *client)
 		goto probe_error_v4l2_ctrl_handler_free;
 	}
 
-
 	ar0234->sd.state_lock = ar0234->ctrl_handler.lock;
 	ret = v4l2_subdev_init_finalize(&ar0234->sd);
 	if (ret < 0) {
@@ -1227,20 +1119,18 @@ static int ar0234_probe(struct i2c_client *client)
 		goto probe_error_media_entity_cleanup;
 	}
 
-	if (!ar0234->is_direct) {
-		if (ar0234->platform_data && ar0234->platform_data->suffix[0])
-			snprintf(ar0234->sd.name, sizeof(ar0234->sd.name), "ar0234 %s",
-				ar0234->platform_data->suffix);
+	if (ar0234->platform_data && ar0234->platform_data->suffix[0])
+		snprintf(ar0234->sd.name, sizeof(ar0234->sd.name), "ar0234 %s",
+			ar0234->platform_data->suffix);
 
-		if (ar0234->platform_data && ar0234->platform_data->lanes)
-			ar0234->lanes = ar0234->platform_data->lanes;
-		else {
-			/* Read info from fwnode entrypoint bus cfg if no platform data */
-			ret = ar0234_get_num_lane(ar0234, &client->dev);
-			if (ret) {
-				dev_err(&client->dev, "failed to get MIPI lane configuration");
-				goto probe_error_media_entity_cleanup;
-			}
+	if (ar0234->platform_data && ar0234->platform_data->lanes)
+		ar0234->lanes = ar0234->platform_data->lanes;
+	else {
+		/* Read info from fwnode entrypoint bus cfg if no platform data */
+		ret = ar0234_get_num_lane(ar0234, &client->dev);
+		if (ret) {
+			dev_err(&client->dev, "failed to get MIPI lane configuration");
+			goto probe_error_media_entity_cleanup;
 		}
 	}
 
@@ -1277,8 +1167,68 @@ probe_error_v4l2_ctrl_handler_free:
 	return ret;
 }
 
-static const struct ar0234_info mipi_info = {
-	.is_direct = true,
+static int __maybe_unused ar0234_suspend(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct ar0234 *ar0234 = to_ar0234(sd);
+
+	mutex_lock(&ar0234_mutex);
+
+	if (ar0234->streaming)
+		ar0234_stop_streaming(ar0234);
+
+	mutex_unlock(&ar0234_mutex);
+
+	if (ar0234->reset_gpio)
+		gpiod_set_value_cansleep(ar0234->reset_gpio, 1);
+
+	return 0;
+}
+
+static int __maybe_unused ar0234_resume(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct ar0234 *ar0234 = to_ar0234(sd);
+	int ret;
+	int count;
+
+	mutex_lock(&ar0234_mutex);
+
+	if (ar0234->reset_gpio) {
+		for (count = 0; count < AR0234_PM_MAX_RETRY; count++) {
+			gpiod_set_value_cansleep(ar0234->reset_gpio, 0);
+			msleep(AR0234_REG_SLEEP_200MS);
+
+			ret = gpiod_get_value_cansleep(ar0234->reset_gpio);
+			if (ret == 0)
+				break;
+		}
+
+		if (ret != 0) {
+			dev_err(&client->dev, "failed to power on sensor in pm resume");
+			mutex_unlock(&ar0234_mutex);
+			return -ETIMEDOUT;
+		}
+	}
+
+	if (ar0234->streaming) {
+		ret = ar0234_start_streaming(ar0234);
+		if (ret) {
+			ar0234->streaming = false;
+			ar0234_stop_streaming(ar0234);
+			goto unlock;
+		}
+	}
+
+unlock:
+	mutex_unlock(&ar0234_mutex);
+	return 0;
+}
+
+static const struct dev_pm_ops ar0234_pm_ops = {
+	SET_SYSTEM_SLEEP_PM_OPS(ar0234_suspend, ar0234_resume)
 };
 
 static const struct i2c_device_id ar0234_id_table[] = {
@@ -1288,7 +1238,7 @@ static const struct i2c_device_id ar0234_id_table[] = {
 MODULE_DEVICE_TABLE(i2c, ar0234_id_table);
 
 static const struct acpi_device_id ar0234_acpi_ids[] = {
-	{ "INTC10C0", (kernel_ulong_t)&mipi_info },
+	{ "INTC10C0" },
 	{}
 };
 MODULE_DEVICE_TABLE(acpi, ar0234_acpi_ids);
@@ -1297,6 +1247,7 @@ static struct i2c_driver ar0234_i2c_driver = {
 	.driver = {
 		.name = "ar0234",
 		.acpi_match_table = ACPI_PTR(ar0234_acpi_ids),
+		.pm = &ar0234_pm_ops,
 	},
 	.probe = ar0234_probe,
 	.remove = ar0234_remove,
