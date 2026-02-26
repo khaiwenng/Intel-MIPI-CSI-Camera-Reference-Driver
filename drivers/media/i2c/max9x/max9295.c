@@ -81,6 +81,8 @@ static void max9295_gpio_set(struct gpio_chip *chip, unsigned int offset, int va
 #else
 static int max9295_gpio_set(struct gpio_chip *chip, unsigned int offset, int value);
 #endif
+static int max9295_gpio_set_config(struct gpio_chip *chip, unsigned int offset, unsigned long config);
+
 static int max9295_setup_gpio(struct max9x_common *common);
 /* max9295 gpio */
 
@@ -152,11 +154,6 @@ static int max9295_gpio_direction_output(struct gpio_chip *chip, unsigned int of
 	// Disable remote control over SerDes link
 	val |= MAX9X_FIELD_PREP(MAX9295_GPIO_A_RX_EN_FIELD, 0U);
 
-	// Configure to push-pull 
-	regmap_update_bits(map, MAX9295_GPIO_B(offset),
-				MAX9295_GPIO_B_OUT_TYPE_FIELD,
-				MAX9X_FIELD_PREP(MAX9295_GPIO_B_OUT_TYPE_FIELD, 1U));
-
 	return regmap_update_bits(map, MAX9295_GPIO_A(offset), mask, val);
 }
 
@@ -194,6 +191,22 @@ static int max9295_gpio_set(struct gpio_chip *chip, unsigned int offset, int val
 }
 #endif
 
+static int max9295_gpio_set_config(struct gpio_chip *chip, unsigned int offset, unsigned long config)
+{
+	struct max9x_common *common = from_gpio_chip(chip);
+	struct regmap *map = common->map;
+	unsigned int out_type_mask = MAX9295_GPIO_B_OUT_TYPE_FIELD;
+	unsigned int out_type_val;
+
+	// open drain is NOT requested, configure to push pull
+	if ((config & GPIO_OPEN_DRAIN) == 0)
+		out_type_val = MAX9X_FIELD_PREP(MAX9295_GPIO_B_OUT_TYPE_FIELD, 1U);
+	else
+		out_type_val = MAX9X_FIELD_PREP(MAX9295_GPIO_B_OUT_TYPE_FIELD, 0U);
+
+	return regmap_update_bits(map, MAX9295_GPIO_B(offset), out_type_mask, out_type_val);
+}
+
 static int max9295_setup_gpio(struct max9x_common *common)
 {
 	struct device *dev = common->dev;
@@ -220,6 +233,7 @@ static int max9295_setup_gpio(struct max9x_common *common)
 	common->gpio_chip.direction_output = max9295_gpio_direction_output;
 	common->gpio_chip.get = max9295_gpio_get;
 	common->gpio_chip.set = max9295_gpio_set;
+	common->gpio_chip.set_config = max9295_gpio_set_config;
 	common->gpio_chip.ngpio = MAX9295_NUM_GPIO;
 	common->gpio_chip.can_sleep = 1;
 	common->gpio_chip.base = -1;
