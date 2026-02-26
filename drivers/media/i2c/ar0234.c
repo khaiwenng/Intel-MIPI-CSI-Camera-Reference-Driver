@@ -729,22 +729,30 @@ static int ar0234_start_streaming(struct ar0234 *ar0234)
 		goto err_rpm_put;
 	}
 
+	ar0234->streaming = true;
 	return 0;
 
 err_rpm_put:
-	pm_runtime_put(&client->dev);
 	return ret;
 }
 
-static void ar0234_stop_streaming(struct ar0234 *ar0234)
+static int ar0234_stop_streaming(struct ar0234 *ar0234)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(&ar0234->sd);
 	int ret;
 
 	ret = cci_write(ar0234->regmap, AR0234_REG_MODE_SELECT,
 			AR0234_MODE_STANDBY, NULL);
-	if (ret)
+	if (ret) {
 		dev_err(&client->dev, "failed to stop stream: %d", ret);
+		goto err_rpm_put;
+	}
+
+	ar0234->streaming = false;
+	return 0;
+
+err_rpm_put:
+	return ret;
 }
 
 static int ar0234_set_stream(struct v4l2_subdev *sd, int enable)
@@ -765,16 +773,17 @@ static int ar0234_set_stream(struct v4l2_subdev *sd, int enable)
 
 		ret = ar0234_start_streaming(ar0234);
 		if (ret) {
-			ar0234_stop_streaming(ar0234);
+			ret = ar0234_stop_streaming(ar0234);
 			pm_runtime_put(&client->dev);
 			goto unlock;
 		}
-		ar0234->streaming = true;
 	}
 	else {
-		ar0234_stop_streaming(ar0234);
+		ret = ar0234_stop_streaming(ar0234);
+		if (ret) {
+			goto unlock;
+		}
 		pm_runtime_put(&client->dev);
-		ar0234->streaming = false;
 	}
 
 	/* vflip and hflip cannot change during streaming */
@@ -783,7 +792,6 @@ static int ar0234_set_stream(struct v4l2_subdev *sd, int enable)
 
 unlock:
 	mutex_unlock(&ar0234_mutex);
-
 	return ret;
 }
 
@@ -1216,7 +1224,6 @@ static int __maybe_unused ar0234_resume(struct device *dev)
 	if (ar0234->streaming) {
 		ret = ar0234_start_streaming(ar0234);
 		if (ret) {
-			ar0234->streaming = false;
 			ar0234_stop_streaming(ar0234);
 			goto unlock;
 		}
