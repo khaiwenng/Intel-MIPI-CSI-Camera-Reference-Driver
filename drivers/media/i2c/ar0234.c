@@ -708,7 +708,7 @@ static int ar0234_start_streaming(struct ar0234 *ar0234)
 		goto err_rpm_put;
 	}
 
-	usleep_range(1000, 1500);
+	msleep(10);
 
 	reg_list = &ar0234->cur_mode->reg_list;
 	ret = cci_multi_reg_write(ar0234->regmap, reg_list->regs,
@@ -943,6 +943,7 @@ static int ar0234_disable_streams(struct v4l2_subdev *subdev,
 	return ar0234_set_stream(subdev, false);
 }
 
+// TODO: Clean up for older kernel version
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
 static int ar0234_get_frame_desc(struct v4l2_subdev *sd,
         unsigned int pad, struct v4l2_mbus_frame_desc *desc)
@@ -1183,6 +1184,8 @@ static int __maybe_unused ar0234_suspend(struct device *dev)
 
 	mutex_lock(&ar0234_mutex);
 
+	// TODO: Add logic to support suspend during streaming later
+
 	if (ar0234->streaming)
 		ar0234_stop_streaming(ar0234);
 
@@ -1220,6 +1223,8 @@ static int __maybe_unused ar0234_resume(struct device *dev)
 			return -ETIMEDOUT;
 		}
 	}
+
+	// TODO: Add logic to support resume streaming after back from suspend later
 
 	if (ar0234->streaming) {
 		ret = ar0234_start_streaming(ar0234);

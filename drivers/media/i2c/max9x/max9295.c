@@ -198,6 +198,8 @@ static int max9295_gpio_set_config(struct gpio_chip *chip, unsigned int offset, 
 	unsigned int out_type_mask = MAX9295_GPIO_B_OUT_TYPE_FIELD;
 	unsigned int out_type_val;
 
+	// TODO: Add pull-up and pull-down support
+
 	// open drain is NOT requested, configure to push pull
 	if ((config & GPIO_OPEN_DRAIN) == 0)
 		out_type_val = MAX9X_FIELD_PREP(MAX9295_GPIO_B_OUT_TYPE_FIELD, 1U);
