@@ -17,11 +17,18 @@
 <CameraSettings>
     <Common>
         <version value="1.0"/>
-        <platform value="IPU6"/>
-        <availableSensors value="isx031-1-0,
-                                 isx031-2-0,
-                                 isx031-3-4,
-                                 isx031-4-4,
+	<platform value="IPU6"/>
+	<!--
+		Remove from list if not matching to use case
+
+                isx031-1 for 1x gmsl
+                isx031-2 for 2x gmsl
+
+                isx031-1-mipi-0 for isx031 mipi on port 0
+                isx031-2-mipi-4 for isx031 mipi on port 4 /-->
+
+        <availableSensors value="isx031-1,
+                                 isx031-2,
                                  isx031-1-mipi-0,
                                  isx031-2-mipi-4"/>
     </Common>
