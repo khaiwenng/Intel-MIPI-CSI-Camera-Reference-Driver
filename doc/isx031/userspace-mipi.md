@@ -6,7 +6,19 @@ This document details the configuration settings for the ISX031 MIPI CSI-2 senso
 
 > **Note:** No External Clock required.
 
-#### IPU6EP Control Logic
+### Disable C States
+
+Config path: `Intel Advanced Menu`->`Power & Performance`->`CPU - Power Management Control`
+
+|                            | Options              |
+|---                         |---                   |
+| C states                   | Disabled             |
+
+> **Note:** : This option is only applicable for IPU6EP platforms (ADL, TWL, ASL and RPL).
+
+### MIPI Camera Configuration for IPU6EP
+
+Config path: `Intel Advanced Menu`->`System Agent (SA) Configuration`->`MIPI Camera Configuration`
 
 |                            | Control Logic 1      | Control Logic 2      |
 |---                         |---                   |---                   |
@@ -21,8 +33,6 @@ This document details the configuration settings for the ISX031 MIPI CSI-2 senso
 | Function                   | RESET                | RESET                |
 | Active Value               | 1                    | 1                    |
 | Initial Value              | 0                    | 0                    |
-
-#### IPU6EP Camera Link Options
 
 |                            | Camera1 Link options | Camera2 Link Options |
 |---                         |---                   | ---                  |
@@ -51,7 +61,9 @@ This document details the configuration settings for the ISX031 MIPI CSI-2 senso
 | Device Type                | Sensor               | Sensor               |
 | Flash Driver Selection     | Disabled             | Disabled             |
 
-#### IPU6EPMTL Control Logic
+### MIPI Camera Configuration for IPU6EPMTL
+
+Config path: `Intel Advanced Menu`->`System Agent (SA) Configuration`->`MIPI Camera Configuration`
 
 |                            | Control Logic 1      | Control Logic 2      |
 |---                         |---                   |---                   |
@@ -67,8 +79,6 @@ This document details the configuration settings for the ISX031 MIPI CSI-2 senso
 | Function                   | RESET                | RESET                |
 | Active Value               | 1                    | 1                    |
 | Initial Value              | 0                    | 0                    |
-
-#### IPU6EPMTL Camera Link Options
 
 |                            | Camera1 Link options | Camera2 Link Options |
 |---                         |---                   | ---                  |
@@ -101,7 +111,9 @@ This document details the configuration settings for the ISX031 MIPI CSI-2 senso
 | Customize Device ID Number | 19                   | 19                   |
 | Flash Driver Selection     | Disabled             | Disabled             |
 
-#### IPU75XA Control Logic
+### MIPI Camera Configuration for IPU75XA
+
+Config path: `Intel Advanced Menu`->`System Agent (SA) Configuration`->`MIPI Camera Configuration`
 
 |                            | Control Logic 1      | Control Logic 2      |
 |---                         |---                   |---                   |
@@ -117,8 +129,6 @@ This document details the configuration settings for the ISX031 MIPI CSI-2 senso
 | Function                   | RESET                | RESET                |
 | Active Value               | 1                    | 1                    |
 | Initial Value              | 0                    | 0                    |
-
-#### IPU75XA Camera Link Options
 
 |                            | Camera1 Link options | Camera2 Link Options |
 |---                         |---                   | ---                  |
@@ -155,27 +165,52 @@ This document details the configuration settings for the ISX031 MIPI CSI-2 senso
 
 > **Note:** CPHY-DPHY converter board required if using PTL CRB.
 
-## Camera XML/JSON File Setup
+## Camera Configuration File Setup
 
-#### IPU6EP Configuration
-
-> **Note:** IPU6EP using same configuration as IPU6EPMTL.
+#### Setup for IPU6EP
 
 Replace target system with recommended [ipu6ep](../../config/isx031/ipu6ep) setting
 
     sudo cp -r ../../config/isx031/ipu6ep /etc/camera
 
-#### IPU6EPMTL Configuration
+#### Setup for IPU6EPMTL
 
 Replace target system with recommended [ipu6epmtl](../../config/isx031/ipu6epmtl) setting
 
-    sudo cp -r ../../config/isx031/ipu6epimtl /etc/camera
+    sudo cp -r ../../config/isx031/ipu6epmtl /etc/camera
 
-#### IPU75XA Configuration
+#### Setup for IPU75XA
 
 Replace target system with recommended [ipu75xa](../../config/isx031/ipu75xa) setting
 
     sudo cp -r ../../config/isx031/ipu75xa /etc/camera
+
+## Environment Setup
+
+Export environment variables below
+
+    export DISPLAY=:0; xhost +
+    export GST_PLUGIN_PATH=/usr/lib/gstreamer-1.0
+    export LIBVA_DRIVER_NAME=iHD
+    export GST_GL_API=gles2
+    export GST_GL_PLATFORM=egl
+    export LIBVA_DRIVERS_PATH=/usr/lib/x86_64-linux-gnu/dri
+    export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/lib/pkgconfig
+    export LD_LIBRARY_PATH=/usr/local/lib/pkgconfig:/usr/local/lib:/usr/lib64:/usr/lib:/usr/lib/x86_64-linux-gnu
+    export logSink=terminal
+    rm -rf ~/.cache/gstreamer-1.0
+
+(Required for IPU6 only) Configure isys_freq value
+
+    sudo bash -c 'echo "options intel-ipu6 isys_freq_override=475" >> /etc/modprobe.d/ipu.conf'
+
+## Sensor Verification
+
+Upon setup completion, verify sensor with:
+
+    media-ctl -p
+
+![media-ctl output](img-entity-isx031-mipi.png)
 
 ## Sample Userspace Command
 
@@ -216,7 +251,7 @@ Replace target system with recommended [ipu75xa](../../config/isx031/ipu75xa) se
 | x1 | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=isx031-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1080' ! glimagesink sync=false |
 | x2 | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=isx031-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1080' ! glimagesink sync=false icamerasrc num-buffers=-1 scene-mode=normal device-name=isx031-2 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1080' ! glimagesink sync=false |
 
-#### FPS Result
+## Streaming Result
 
 | Number of Stream | IO Mode  | FPS Result |
 |---               |---       |---         |

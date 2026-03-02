@@ -51,7 +51,7 @@ IPU75XA represents PTL platforms.
 |--------------------|-----------------|-----------------|
 | IPU6EP / IPU6EPMTL | 24.04.4         | 6.12 Intel BKC  |
 |                    | 24.04.4         | 6.17 Canonical  |
-| IPU75XA            | 24.04.4         | 6.17 Canonical  |
+| IPU75XA            | 24.04.4         | 6.17 Intel BKC  |
 |                    | 24.04.4         | 6.17 Canonical  |
 
 ## Directory Structure

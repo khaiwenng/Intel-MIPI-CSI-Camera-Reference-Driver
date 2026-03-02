@@ -6,7 +6,17 @@ This document details the configuration settings for the ISX031 GMSL sensor, pro
 
 > **Note:** No External Clock required.
 
-#### Sensor ACPI HID
+### Disable C States
+
+Config path: `Intel Advanced Menu`->`Power & Performance`->`CPU - Power Management Control`
+
+|                            | Options              |
+|---                         |---                   |
+| C states                   | Disabled             |
+
+> **Note:** : This option is only applicable for IPU6EP platforms (ADL, TWL, ASL and RPL).
+
+### Sensor ACPI HID
 
 | Vendor                     | Sensor ACPI HID      |
 |---                         |---                   |
@@ -15,7 +25,11 @@ This document details the configuration settings for the ISX031 GMSL sensor, pro
 | Otobrite                   | INTC031O             |
 | Sensing                    | INTC031S             |
 
-#### IPU6EP Camera Option
+> **Note:** Sensor ACPI HID value will be used for `MIPI Camera Configuration`.
+
+### MIPI Camera Configuration for IPU6EP
+
+Config path: `Intel Advanced Menu`->`System Agent (SA) Configuration`->`MIPI Camera Configuration`
 
 |                            | Camera1 Link options | Camera2 Link Options |
 |---                         |---                   | ---                  |
@@ -37,7 +51,7 @@ This document details the configuration settings for the ISX031 GMSL sensor, pro
 | EEPROM Type                | ROM_NONE             | ROM_NONE             |
 | VCM Type                   | VCM_NONE             | VCM_NONE             |
 | Number of I2C Components   | 3                    | 3                    |
-| I2C Channel                | I2C1                 | I2C0                 |
+| I2C Channel                | I2C1                 | I2C5                 |
 | Device 0                   |                      |                      |
 | I2C Address                | 48                   | 48                   |
 | Device Type                | Sensor               | Sensor               |
@@ -53,9 +67,11 @@ This document details the configuration settings for the ISX031 GMSL sensor, pro
 | Customize Device ID Number | 19                   | 19                   |
 | Flash Driver Selection     | Disabled             | Disabled             |
 
-#### IPU6EPMTL Camera Option
+### MIPI Camera Configuration for IPU6EPMTL
 
-###### Connected to MAX9296 AIC
+Config path: `Intel Advanced Menu`->`System Agent (SA) Configuration`->`MIPI Camera Configuration`
+
+#### Connected to MAX9296 AIC
 
 |                            | Camera1 Link options | Camera2 Link Options |
 |---                         |---                   | ---                  |
@@ -93,7 +109,7 @@ This document details the configuration settings for the ISX031 GMSL sensor, pro
 | Customize Device ID Number | 19                   | 19                   |
 | Flash Driver Selection     | Disabled             | Disabled             |
 
-###### Connected to D-PHY of MAX96724 AIC
+#### Connected to D-PHY of MAX96724 AIC
 
 AIC jumper connections
 ![AIC jumper connections](max96724-fabb-dphy.jpg)
@@ -134,9 +150,11 @@ AIC jumper connections
 | Customize Device ID Number | 19                   | 19                   |
 | Flash Driver Selection     | Disabled             | Disabled             |
 
-#### IPU75XA Camera Link Options
+### MIPI Camera Configuration for IPU75XA
 
-###### Connected to C-PHY of MAX96724 AIC
+Config path: `Intel Advanced Menu`->`System Agent (SA) Configuration`->`MIPI Camera Configuration`
+
+#### Connected to C-PHY of MAX96724 AIC
 
 AIC jumper connections
 ![AIC jumper connections](max96724-fabb-cphy.jpg)
@@ -179,7 +197,7 @@ AIC jumper connections
 | Customize Device ID Number | 19                   | 19                   |
 | Flash Driver Selection     | Disabled             | Disabled             |
 
-###### Connected to D-PHY of MAX96724 AIC (via C-to-D-PHY adaptor)
+#### Connected to D-PHY of MAX96724 AIC (via C-to-D-PHY adaptor)
 
 |                            | Camera1 Link options | Camera2 Link Options |
 |---                         |---                   | ---                  |
@@ -219,27 +237,52 @@ AIC jumper connections
 | Customize Device ID Number | 19                   | 19                   |
 | Flash Driver Selection     | Disabled             | Disabled             |
 
-## Camera XML/JSON File Setup
+## Camera Configuration File Setup
 
-#### IPU6EP Configuration
-
-> **Note:** IPU6EP using same configuration as IPU6EPMTL.
+#### Setup for IPU6EP
 
 Replace target system with recommended [ipu6ep](../../config/isx031/ipu6ep) setting
 
     sudo cp -r ../../config/isx031/ipu6ep /etc/camera
 
-#### IPU6EPMTL Configuration
+#### Setup for IPU6EPMTL
 
 Replace target system with recommended [ipu6epmtl](../../config/isx031/ipu6epmtl) setting
 
-    sudo cp -r ../../config/isx031/ipu6epimtl /etc/camera
+    sudo cp -r ../../config/isx031/ipu6epmtl /etc/camera
 
-#### IPU75XA Configuration
+#### Setup for IPU75XA
 
 Replace target system with recommended [ipu75xa](../../config/isx031/ipu75xa) setting
 
     sudo cp -r ../../config/isx031/ipu75xa /etc/camera
+
+## Environment Setup
+
+Export environment variables below
+
+    export DISPLAY=:0; xhost +
+    export GST_PLUGIN_PATH=/usr/lib/gstreamer-1.0
+    export LIBVA_DRIVER_NAME=iHD
+    export GST_GL_API=gles2
+    export GST_GL_PLATFORM=egl
+    export LIBVA_DRIVERS_PATH=/usr/lib/x86_64-linux-gnu/dri
+    export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/lib/pkgconfig
+    export LD_LIBRARY_PATH=/usr/local/lib/pkgconfig:/usr/local/lib:/usr/lib64:/usr/lib:/usr/lib/x86_64-linux-gnu
+    export logSink=terminal
+    rm -rf ~/.cache/gstreamer-1.0
+
+(Required for IPU6 only) Configure isys_freq value
+
+    sudo bash -c 'echo "options intel-ipu6 isys_freq_override=475" >> /etc/modprobe.d/ipu.conf'
+
+## Sensor Verification
+
+Upon setup completion, verify sensor with:
+
+    media-ctl -p
+
+![media-ctl output](img-entity-isx031-gmsl.png)
 
 ## Sample Userspace Command
 
@@ -288,7 +331,7 @@ Replace target system with recommended [ipu75xa](../../config/isx031/ipu75xa) se
 | x4 | gst-launch-1.0 icamerasrc num-buffers=-1 num-vc=4 scene-mode=normal device-name=isx031x4-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1536' ! glimagesink sync=false icamerasrc num-buffers=-1 num-vc=4 scene-mode=normal device-name=isx031x4-2 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1536' ! glimagesink sync=false icamerasrc num-buffers=-1 num-vc=4 scene-mode=normal device-name=isx031x4-3 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1536' ! glimagesink sync=false icamerasrc num-buffers=-1 num-vc=4 scene-mode=normal device-name=isx031x4-4 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1536' ! glimagesink sync=false |
 | x8 | gst-launch-1.0 icamerasrc num-buffers=-1 num-vc=8 scene-mode=normal device-name=isx031x8-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1536' ! glimagesink sync=false icamerasrc num-buffers=-1 num-vc=8 scene-mode=normal device-name=isx031x8-2 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1536' ! glimagesink sync=false icamerasrc num-buffers=-1 num-vc=8 scene-mode=normal device-name=isx031x8-3 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1536' ! glimagesink sync=false icamerasrc num-buffers=-1 num-vc=8 scene-mode=normal device-name=isx031x8-4 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1536' ! glimagesink sync=false icamerasrc num-buffers=-1 num-vc=8 scene-mode=normal device-name=isx031x8-5 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1536' ! glimagesink sync=false icamerasrc num-buffers=-1 num-vc=8 scene-mode=normal device-name=isx031x8-6 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1536' ! glimagesink sync=false icamerasrc num-buffers=-1 num-vc=8 scene-mode=normal device-name=isx031x8-7 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1536' ! glimagesink sync=false icamerasrc num-buffers=-1 num-vc=8 scene-mode=normal device-name=isx031x8-8 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1536' ! glimagesink sync=false |
 
-#### FPS Result
+## Streaming Result
 
 | Number of Stream | IO Mode  | FPS Result |
 |---               |---       |---         |
@@ -301,4 +344,4 @@ Replace target system with recommended [ipu75xa](../../config/isx031/ipu75xa) se
 | x4               | DMA MODE | 30         |
 | x8               | DMA MODE | 30         |
 
-> **Note:** Please ensure your system enable support for specified  number of stream before test.
+> **Note:** Please ensure your system enable support for specified number of stream before test.

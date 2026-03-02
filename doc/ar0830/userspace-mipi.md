@@ -6,7 +6,9 @@ This document details the configuration settings for the AR0830 MIPI CSI-2 senso
 
 > **Note:** No External Clock required.
 
-#### IPU6EPMTL Control Logic
+### MIPI Camera Configuration for IPU6EPMTL
+
+Config path: `Intel Advanced Menu`->`System Agent (SA) Configuration`->`MIPI Camera Configuration`
 
 |                            | Control Logic 1      | Control Logic 2      |
 |---                         |---                   |---                   |
@@ -19,9 +21,7 @@ This document details the configuration settings for the AR0830 MIPI CSI-2 senso
 | Active Value               | 1                    | 1                    |
 | Initial Value              | 1                    | 1                    |
 
-#### IPU6EPMTL Camera Link Option
-
-|                            | Camera Option 1      | Camera Option 2      |
+|                            | Camera1 Link options | Camera2 Link options |
 |---                         |---                   |---                   |
 | Sensor Model               | User Custom          | User Custom          |
 | Custom HID                 | LIAR0830             | LIAR0830             |
@@ -51,7 +51,9 @@ This document details the configuration settings for the AR0830 MIPI CSI-2 senso
 | Customize Device ID Number | 19                   | 19                   |
 | Flash Driver Selection     | Disabled             | Disabled             |
 
-#### IPU75XA Control Logic
+### MIPI Camera Configuration for IPU75XA
+
+Config path: `Intel Advanced Menu`->`System Agent (SA) Configuration`->`MIPI Camera Configuration`
 
 |                            | Control Logic 1      | Control Logic 2      |
 |---                         |---                   |---                   |
@@ -64,11 +66,9 @@ This document details the configuration settings for the AR0830 MIPI CSI-2 senso
 | Active Value               | 1                    | 1                    |
 | Initial Value              | 0                    | 0                    |
 
-#### IPU75XA Camera Link Options
-
 > **Note:** The maximum number of lanes supported on CRD2 port is 2.
 
-|                            | Camera Option 1      | Camera Option 2      |
+|                            | Camera1 Link options | Camera2 Link options |
 |---                         |---                   |---                   |
 | Sensor Model               | User Custom          | User Custom          |
 | Audio HID                  | _                    | _                    |
@@ -100,27 +100,54 @@ This document details the configuration settings for the AR0830 MIPI CSI-2 senso
 | Customize Device ID Number | 19                   | 19                   |
 | Flash Driver Selection     | Disabled             | Disabled             |
 
-## Camera XML/JSON File Setup
+## Camera Configuration File Setup
 
-#### IPU6EPMTL Configuration
+#### Setup for IPU6EPMTL
 
 Replace target system with recommended [ipu6epmtl](../../config/ar0830/ipu6epmtl) setting
 
     sudo cp -r ../../config/ar0830/ipu6epmtl /etc/camera
 
-#### IPU75XA Configuration
+#### Setup for IPU75XA
 
 Replace target system with recommended [ipu75xa](../../config/ar0830/ipu75xa) setting
 
     sudo cp -r ../../config/ar0830/ipu75xa /etc/camera
 
-## Load Sensor Firmware
+## Camera Firmware Update
 
-Load sensor firmware file into target system `/lib/firmware`
+Update camera firmware file into target system `/lib/firmware`
 
     sudo cp "<firmware_file>" /lib/firmware
 
-> **Note:** Please obtain the sensor firmware file from your respective vendor.
+> **Note:** Please obtain the camera firmware file from your respective vendor.
+
+## Environment Setup
+
+Export environment variables below
+
+    export DISPLAY=:0; xhost +
+    export GST_PLUGIN_PATH=/usr/lib/gstreamer-1.0
+    export LIBVA_DRIVER_NAME=iHD
+    export GST_GL_API=gles2
+    export GST_GL_PLATFORM=egl
+    export LIBVA_DRIVERS_PATH=/usr/lib/x86_64-linux-gnu/dri
+    export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/lib/pkgconfig
+    export LD_LIBRARY_PATH=/usr/local/lib/pkgconfig:/usr/local/lib:/usr/lib64:/usr/lib:/usr/lib/x86_64-linux-gnu
+    export logSink=terminal
+    rm -rf ~/.cache/gstreamer-1.0
+
+(Required for IPU6 only) Configure isys_freq value
+
+    sudo bash -c 'echo "options intel-ipu6 isys_freq_override=475" >> /etc/modprobe.d/ipu.conf'
+
+## Sensor Verification
+
+Upon setup completion, verify sensor with:
+
+    media-ctl -p
+
+![media-ctl output](img-entity-ar0830-mipi.png)
 
 ## Sample Userspace Command
 
@@ -161,7 +188,7 @@ Load sensor firmware file into target system `/lib/firmware`
 | x1 | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=ar0830-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=3840,height=2160' ! glimagesink sync=false |
 | x2 | gst-launch-1.0 icamerasrc num-buffers=-1 scene-mode=normal device-name=ar0830-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=3840,height=2160' ! glimagesink sync=false icamerasrc num-buffers=-1 scene-mode=normal device-name=ar0830-2 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=3840,height=2160' ! glimagesink sync=false |
 
-#### FPS Result
+## Streaming Result
 
 | Number of Stream | IO Mode  | FPS Result |
 |---               |---       |---         |

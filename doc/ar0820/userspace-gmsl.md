@@ -6,7 +6,9 @@ This document details the configuration settings for the AR0820 GMSL sensor, pro
 
 > **Note:** No External Clock required.
 
-#### IPU6EPMTL Camera Option
+### MIPI Camera Configuration for IPU6EPMTL
+
+Config path: `Intel Advanced Menu`->`System Agent (SA) Configuration`->`MIPI Camera Configuration`
 
 |                            | Camera1 Link options |
 |---                         |---                   |
@@ -44,7 +46,9 @@ This document details the configuration settings for the AR0820 GMSL sensor, pro
 | Customize Device ID Number | 19                   |
 | Flash Driver Selection     | Disabled             |
 
-#### IPU75XA Camera Link Options
+### MIPI Camera Configuration for IPU75XA
+
+Config path: `Intel Advanced Menu`->`System Agent (SA) Configuration`->`MIPI Camera Configuration`
 
 |                            | Camera1 Link options |
 |---                         |---                   |
@@ -84,19 +88,46 @@ This document details the configuration settings for the AR0820 GMSL sensor, pro
 | Customize Device ID Number | 19                   |
 | Flash Driver Selection     | Disabled             |
 
-## Camera XML File Setup
+## Camera Configuration File Setup
 
-#### IPU6EPMTL Configuration
+#### Setup for IPU6EPMTL
 
 Replace target system with recommended [ipu6epmtl](../../config/ar0820/ipu6epmtl) setting
 
     sudo cp -r ../../config/ar0820/ipu6epmtl /etc/camera
 
-#### IPU75XA Configuration
+#### Setup for IPU75XA
 
 Replace target system with recommended [ipu75xa](../../config/ar0820/ipu75xa) setting
 
     sudo cp -r ../../config/ar0820/ipu75xa /etc/camera
+
+## Environment Setup
+
+Export environment variables below
+
+    export DISPLAY=:0; xhost +
+    export GST_PLUGIN_PATH=/usr/lib/gstreamer-1.0
+    export LIBVA_DRIVER_NAME=iHD
+    export GST_GL_API=gles2
+    export GST_GL_PLATFORM=egl
+    export LIBVA_DRIVERS_PATH=/usr/lib/x86_64-linux-gnu/dri
+    export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:/usr/lib64/pkgconfig:/usr/lib/pkgconfig
+    export LD_LIBRARY_PATH=/usr/local/lib/pkgconfig:/usr/local/lib:/usr/lib64:/usr/lib:/usr/lib/x86_64-linux-gnu
+    export logSink=terminal
+    rm -rf ~/.cache/gstreamer-1.0
+
+(Required for IPU6 only) Configure isys_freq value
+
+    sudo bash -c 'echo "options intel-ipu6 isys_freq_override=475" >> /etc/modprobe.d/ipu.conf'
+
+## Sensor Verification
+
+Upon setup completion, verify sensor with:
+
+    media-ctl -p
+
+![media-ctl output](img-entity-ar0820-gmsl.png)
 
 ## Sample Userspace Command
 
@@ -131,9 +162,11 @@ Replace target system with recommended [ipu75xa](../../config/ar0820/ipu75xa) se
 |---|---|
 | x1 | gst-launch-1.0 icamerasrc num-buffers=-1 num-vc=1 scene-mode=normal device-name=ar0820-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=3840,height=2160' ! glimagesink sync=false |
 
-#### FPS Result
+## Streaming Result
 
 | Number of Stream | IO Mode  | FPS Result |
 |---               |---       |---         |
 | x1               | MMAP     | 30         |
 | x1               | DMA MODE | 30         |
+
+> **Note:** Please ensure your system enable support for specified number of stream before test.
