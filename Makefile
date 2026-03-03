@@ -70,6 +70,9 @@ obj-m += ipu6-drivers/drivers/media/pci/intel/ipu6/
 # Build V4L2 core module
 obj-m += 6.17.0/drivers/media/v4l2-core/
 
+# Build ipu-bridge module
+obj-m += 6.17.0/drivers/media/pci/intel/
+
 else ifeq ($(KERNEL_EQ_6_12),1)
 # IPU6 driver configs
 export CONFIG_VIDEO_INTEL_IPU6=m
@@ -82,7 +85,6 @@ obj-m += ipu6-drivers/drivers/media/pci/intel/ipu6/
 
 endif
 
-obj-m += drivers/media/pci/intel/
 obj-y += drivers/media/platform/intel/
 obj-m += drivers/media/i2c/
 

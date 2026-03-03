@@ -1,0 +1,364 @@
+From: Yew, Chang Ching <chang.ching.yew@intel.com>
+Date: Tue, 3 Mar 2026 17:30:00 +0800
+Subject: [PATCH] ipu-bridge: Add scaling direct MIPI HIDS
+
+Signed-off-by: Yew, Chang Ching <chang.ching.yew@intel.com>
+---
+ 6.17.0/drivers/media/pci/intel/Kconfig      |   5 -
+ 6.17.0/drivers/media/pci/intel/Makefile     |   5 +-
+ 6.17.0/drivers/media/pci/intel/ipu-bridge.c | 173 ++++++++++++++++++++++++++++++++++-
+ 3 files changed, 173 insertions(+), 10 deletions(-)
+
+diff --git b/6.17.0/drivers/media/pci/intel/Kconfig a/6.17.0/drivers/media/pci/intel/Kconfig
+index d9fcddc..3fa2b72 100644
+--- b/6.17.0/drivers/media/pci/intel/Kconfig
++++ a/6.17.0/drivers/media/pci/intel/Kconfig
+@@ -1,9 +1,4 @@
+ # SPDX-License-Identifier: GPL-2.0-only
+-
+-source "drivers/media/pci/intel/ipu3/Kconfig"
+-source "drivers/media/pci/intel/ipu6/Kconfig"
+-source "drivers/media/pci/intel/ivsc/Kconfig"
+-
+ config IPU_BRIDGE
+ 	tristate "Intel IPU Bridge"
+ 	depends on ACPI || COMPILE_TEST
+diff --git b/6.17.0/drivers/media/pci/intel/Makefile a/6.17.0/drivers/media/pci/intel/Makefile
+index 3a2cc65..16dc2d2 100644
+--- b/6.17.0/drivers/media/pci/intel/Makefile
++++ a/6.17.0/drivers/media/pci/intel/Makefile
+@@ -2,7 +2,4 @@
+ #
+ # Makefile for the IPU drivers
+ #
+-obj-$(CONFIG_IPU_BRIDGE) += ipu-bridge.o
+-obj-y	+= ipu3/
+-obj-y	+= ivsc/
+-obj-$(CONFIG_VIDEO_INTEL_IPU6)	+= ipu6/
++obj-$(CONFIG_IPU_BRIDGE) += ipu-bridge.o
+\ No newline at end of file
+diff --git b/6.17.0/drivers/media/pci/intel/ipu-bridge.c a/6.17.0/drivers/media/pci/intel/ipu-bridge.c
+index 4e57935..4a39114 100644
+--- b/6.17.0/drivers/media/pci/intel/ipu-bridge.c
++++ a/6.17.0/drivers/media/pci/intel/ipu-bridge.c
+@@ -12,8 +12,9 @@
+ #include <linux/property.h>
+ #include <linux/string.h>
+ #include <linux/workqueue.h>
++#include <linux/version.h>
+ 
+-#include <media/ipu-bridge.h>
++#include "media/ipu-bridge.h"
+ #include <media/v4l2-fwnode.h>
+ 
+ #define ADEV_DEV(adev) ACPI_PTR(&((adev)->dev))
+@@ -35,6 +36,11 @@
+  */
+ #define IVSC_DEV_NAME "intel_vsc"
+ 
++#if IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
++#define PHY_MODE_DPHY  0
++#define PHY_MODE_CPHY  1
++#endif
++
+ /*
+  * Extend this array with ACPI Hardware IDs of devices known to be working
+  * plus the number of link-frequencies expected by their drivers, along with
+@@ -92,7 +98,24 @@ static const struct ipu_sensor_config ipu_supported_sensors[] = {
+ 	IPU_SENSOR_CONFIG("OVTI8856", 3, 180000000, 360000000, 720000000),
+ 	/* Toshiba T4KA3 */
+ 	IPU_SENSOR_CONFIG("XMCC0003", 1, 321468000),
++	/* Lontium lt6911gxd */
++	IPU_SENSOR_CONFIG("INTC1124", 0),
++	/* D3 Embedded ISX031 */
++	IPU_SENSOR_CONFIG("INTC113C", 1, 300000000),
++	/* LI AR0830 */
++	IPU_SENSOR_CONFIG("LIAR0830", 1, 600000000),
++	/* Innodisk AR0822 */
++	IPU_SENSOR_CONFIG("EV8MOOM1", 1, 600000000),
++	/* OnSemiconductor ar0234 */
++	IPU_SENSOR_CONFIG("INTC10C0", 1, 360000000),
++};
++
++#if !IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
++static const struct ipu_sensor_config ipu_supported_sensors_dummy[] = {
++	/* Lontium lt6911uxc dummy port for split mode */
++	IPU_SENSOR_CONFIG("INTC10B1", 0),
+ };
++#endif
+ 
+ static const struct ipu_property_names prop_names = {
+ 	.clock_frequency = "clock-frequency",
+@@ -312,6 +335,9 @@ int ipu_bridge_parse_ssdb(struct acpi_device *adev, struct ipu_sensor *sensor)
+ 
+ 	sensor->link = ssdb.link;
+ 	sensor->lanes = ssdb.lanes;
++#if IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
++	sensor->phyconfig = ssdb.phyconfig;
++#endif
+ 	sensor->mclkspeed = ssdb.mclkspeed;
+ 	sensor->rotation = ipu_bridge_parse_rotation(adev, &ssdb);
+ 	sensor->orientation = ipu_bridge_parse_orientation(adev);
+@@ -321,7 +347,11 @@ int ipu_bridge_parse_ssdb(struct acpi_device *adev, struct ipu_sensor *sensor)
+ 
+ 	return 0;
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,13,0)
+ EXPORT_SYMBOL_NS_GPL(ipu_bridge_parse_ssdb, "INTEL_IPU_BRIDGE");
++#else
++EXPORT_SYMBOL_NS_GPL(ipu_bridge_parse_ssdb, INTEL_IPU_BRIDGE);
++#endif
+ 
+ static void ipu_bridge_create_fwnode_properties(
+ 	struct ipu_sensor *sensor,
+@@ -330,6 +360,9 @@ static void ipu_bridge_create_fwnode_properties(
+ {
+ 	struct ipu_property_names *names = &sensor->prop_names;
+ 	struct software_node *nodes = sensor->swnodes;
++#if IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
++	u8 bus_type;
++#endif
+ 
+ 	sensor->prop_names = prop_names;
+ 
+@@ -387,9 +420,22 @@ static void ipu_bridge_create_fwnode_properties(
+ 			PROPERTY_ENTRY_REF_ARRAY("lens-focus", sensor->vcm_ref);
+ 	}
+ 
++#if IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
++	if (sensor->phyconfig == PHY_MODE_DPHY)
++		bus_type = V4L2_FWNODE_BUS_TYPE_CSI2_DPHY;
++	else if (sensor->phyconfig == PHY_MODE_CPHY)
++		bus_type = V4L2_FWNODE_BUS_TYPE_CSI2_CPHY;
++	else
++		bus_type = V4L2_FWNODE_BUS_TYPE_GUESS;
++
+ 	sensor->ep_properties[0] = PROPERTY_ENTRY_U32(
+ 					sensor->prop_names.bus_type,
++					bus_type);
++#else
++ 	sensor->ep_properties[0] = PROPERTY_ENTRY_U32(
++ 					sensor->prop_names.bus_type,
+ 					V4L2_FWNODE_BUS_TYPE_CSI2_DPHY);
++#endif
+ 	sensor->ep_properties[1] = PROPERTY_ENTRY_U32_ARRAY_LEN(
+ 					sensor->prop_names.data_lanes,
+ 					bridge->data_lanes, sensor->lanes);
+@@ -409,6 +455,17 @@ static void ipu_bridge_create_fwnode_properties(
+ 	sensor->ipu_properties[1] = PROPERTY_ENTRY_REF_ARRAY(
+ 					sensor->prop_names.remote_endpoint,
+ 					sensor->remote_ref);
++
++#if IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
++	/*
++	 * TODO: Remove the bus_type property for IPU
++	 * 1. keep fwnode property list no change.
++	 * 2. IPU driver needs to get bus_type from remote sensor ep.
++	 */
++	sensor->ipu_properties[2] = PROPERTY_ENTRY_U32
++					(sensor->prop_names.bus_type,
++					bus_type);
++#endif
+ }
+ 
+ static void ipu_bridge_init_swnode_names(struct ipu_sensor *sensor)
+@@ -470,18 +527,62 @@ static void ipu_bridge_init_swnode_group(struct ipu_sensor *sensor)
+ 	}
+ }
+ 
++#if !IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
++static struct ipu_sensor *find_real_sensor(struct ipu_bridge *bridge,
++					   struct acpi_device *adev)
++{
++	struct ipu_sensor *sensor;
++	unsigned int i;
++
++	for (i = 0; i < bridge->n_sensors; i++) {
++		sensor = &bridge->sensors[i];
++		if (sensor->adev == ACPI_PTR(acpi_dev_get(adev)))
++			return sensor;
++	}
++
++	return NULL;
++}
++#endif
++
++#if IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
+ static void ipu_bridge_create_connection_swnodes(struct ipu_bridge *bridge,
+ 						 struct ipu_sensor *sensor)
++#else
++static void ipu_bridge_create_connection_swnodes(struct ipu_bridge *bridge,
++						 struct ipu_sensor *sensor,
++						 bool dummy)
++#endif
+ {
+ 	struct ipu_node_names *names = &sensor->node_names;
+ 	struct software_node *nodes = sensor->swnodes;
+ 
+ 	ipu_bridge_init_swnode_names(sensor);
+ 
++#if IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
+ 	nodes[SWNODE_SENSOR_HID] = NODE_SENSOR(sensor->name,
+ 					       sensor->dev_properties);
+ 	nodes[SWNODE_SENSOR_PORT] = NODE_PORT(sensor->node_names.port,
+ 					      &nodes[SWNODE_SENSOR_HID]);
++#else
++	if (dummy) {
++		struct ipu_sensor *real_sensor;
++
++		real_sensor = find_real_sensor(bridge, sensor->adev);
++		nodes[SWNODE_SENSOR_HID] =
++				real_sensor->swnodes[SWNODE_SENSOR_HID];
++		/* 1 for dummy port */
++		snprintf(sensor->node_names.port,
++				sizeof(sensor->node_names.port),
++				SWNODE_GRAPH_PORT_NAME_FMT, 1);
++		nodes[SWNODE_SENSOR_PORT] = NODE_PORT(sensor->node_names.port,
++				&real_sensor->swnodes[SWNODE_SENSOR_HID]);
++	} else {
++		nodes[SWNODE_SENSOR_HID] = NODE_SENSOR(sensor->name,
++				sensor->dev_properties);
++		nodes[SWNODE_SENSOR_PORT] = NODE_PORT(sensor->node_names.port,
++				&nodes[SWNODE_SENSOR_HID]);
++	}
++#endif
+ 	nodes[SWNODE_SENSOR_ENDPOINT] = NODE_ENDPOINT(
+ 						sensor->node_names.endpoint,
+ 						&nodes[SWNODE_SENSOR_PORT],
+@@ -627,7 +728,11 @@ int ipu_bridge_instantiate_vcm(struct device *sensor)
+ 
+ 	return 0;
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,13,0)
+ EXPORT_SYMBOL_NS_GPL(ipu_bridge_instantiate_vcm, "INTEL_IPU_BRIDGE");
++#else
++EXPORT_SYMBOL_NS_GPL(ipu_bridge_instantiate_vcm, INTEL_IPU_BRIDGE);
++#endif
+ 
+ static int ipu_bridge_instantiate_ivsc(struct ipu_sensor *sensor)
+ {
+@@ -659,8 +764,13 @@ static void ipu_bridge_unregister_sensors(struct ipu_bridge *bridge)
+ 	}
+ }
+ 
++#if IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
+ static int ipu_bridge_connect_sensor(const struct ipu_sensor_config *cfg,
+ 				     struct ipu_bridge *bridge)
++#else
++static int ipu_bridge_connect_sensor(const struct ipu_sensor_config *cfg,
++				     struct ipu_bridge *bridge, bool dummy)
++#endif
+ {
+ 	struct fwnode_handle *fwnode, *primary;
+ 	struct ipu_sensor *sensor;
+@@ -683,6 +793,20 @@ static int ipu_bridge_connect_sensor(const struct ipu_sensor_config *cfg,
+ 		if (ret)
+ 			goto err_put_adev;
+ 
++#if !IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
++		if (dummy) {
++			if (sensor->link == sensor->pprval) {
++				acpi_dev_put(adev);
++				continue;
++			} else {
++				dev_info(ADEV_DEV(adev),
++					 "dummy sensor, link %d, pprval %d\n",
++					 sensor->link, sensor->pprval);
++				sensor->link = sensor->pprval;
++			}
++		}
++#endif
++
+ 		snprintf(sensor->name, sizeof(sensor->name), "%s-%u",
+ 			 cfg->hid, sensor->link);
+ 
+@@ -691,23 +815,51 @@ static int ipu_bridge_connect_sensor(const struct ipu_sensor_config *cfg,
+ 			goto err_put_adev;
+ 
+ 		ipu_bridge_create_fwnode_properties(sensor, bridge, cfg);
++#if IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
+ 		ipu_bridge_create_connection_swnodes(bridge, sensor);
+ 
+ 		ret = software_node_register_node_group(sensor->group);
+ 		if (ret)
+ 			goto err_put_ivsc;
++#else
++		if (dummy) {
++			/* need adev to match the dummy port with the real one */
++			sensor->adev = adev;
++		}
++		ipu_bridge_create_connection_swnodes(bridge, sensor, dummy);
+ 
++		if (dummy) {
++			ret = software_node_register_node_group(&sensor->group[1]);
++		} else {
++			ret = software_node_register_node_group(sensor->group);
++		}
++		if (ret)
++			goto err_put_ivsc;
++#endif
++
++#if !IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
++		if (!dummy) {
++#endif
+ 		fwnode = software_node_fwnode(&sensor->swnodes[
+ 						      SWNODE_SENSOR_HID]);
+ 		if (!fwnode) {
+ 			ret = -ENODEV;
+ 			goto err_free_swnodes;
+ 		}
++#if !IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
++		}
++#endif
+ 
+ 		sensor->adev = ACPI_PTR(acpi_dev_get(adev));
+ 
++#if !IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
++		if (!dummy) {
++#endif
+ 		primary = acpi_fwnode_handle(adev);
+ 		primary->secondary = fwnode;
++#if !IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
++		}
++#endif
+ 
+ 		ret = ipu_bridge_instantiate_ivsc(sensor);
+ 		if (ret)
+@@ -740,10 +892,25 @@ static int ipu_bridge_connect_sensors(struct ipu_bridge *bridge)
+ 		const struct ipu_sensor_config *cfg =
+ 			&ipu_supported_sensors[i];
+ 
++#if IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
+ 		ret = ipu_bridge_connect_sensor(cfg, bridge);
++#else
++		ret = ipu_bridge_connect_sensor(cfg, bridge, 0);
++#endif
++		if (ret)
++			goto err_unregister_sensors;
++	}
++
++#if !IS_ENABLED(CONFIG_VIDEO_INTEL_IPU7)
++	for (i = 0; i < ARRAY_SIZE(ipu_supported_sensors_dummy); i++) {
++		const struct ipu_sensor_config *cfg =
++			&ipu_supported_sensors_dummy[i];
++
++		ret = ipu_bridge_connect_sensor(cfg, bridge, 1);
+ 		if (ret)
+ 			goto err_unregister_sensors;
+ 	}
++#endif
+ 
+ 	return 0;
+ 
+@@ -870,7 +1037,11 @@ err_free_bridge:
+ 
+ 	return ret;
+ }
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6,13,0)
+ EXPORT_SYMBOL_NS_GPL(ipu_bridge_init, "INTEL_IPU_BRIDGE");
++#else
++EXPORT_SYMBOL_NS_GPL(ipu_bridge_init, INTEL_IPU_BRIDGE);
++#endif
+ 
+ MODULE_LICENSE("GPL");
+ MODULE_DESCRIPTION("Intel IPU Sensors Bridge driver");
