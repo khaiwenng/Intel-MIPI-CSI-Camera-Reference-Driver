@@ -47,6 +47,7 @@ Config path: `Intel Advanced Menu`->`System Agent (SA) Configuration`->`MIPI Cam
 | Camera module name         | _                    | _                    |
 | MIPI port                  | 1                    | 2                    |
 | LaneUsed                   | x4                   | x4                   |
+| PortSpeed                  | 1                    | 2                    |
 | MCLK                       | 19200000             | 19200000             |
 | EEPROM Type                | ROM_NONE             | ROM_NONE             |
 | VCM Type                   | VCM_NONE             | VCM_NONE             |
@@ -62,9 +63,6 @@ Config path: `Intel Advanced Menu`->`System Agent (SA) Configuration`->`MIPI Cam
 | I2C Address                | 50                   | 50                   |
 | Device Type                | Sensor               | Sensor               |
 | Customize Device ID List   |                      |                      |
-| Customize Device ID Number | 17                   | 17                   |
-| Customize Device ID Number | 18                   | 18                   |
-| Customize Device ID Number | 19                   | 19                   |
 | Flash Driver Selection     | Disabled             | Disabled             |
 
 ### MIPI Camera Configuration for IPU6EPMTL
