@@ -131,12 +131,12 @@ static const struct ipu_acpi_devices supported_devices[] = {
 			{
 				.chip_hwnum = 0,
 				.con_id = "reset",
-				.flags = GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN,
+				.flags = GPIO_ACTIVE_LOW,
 			},
 			{
 				.chip_hwnum = 7,
 				.con_id = "fsin",
-				.flags = GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN,
+				.flags = GPIO_ACTIVE_LOW,
 			},
 		},
 		.sensor_dt = MIPI_CSI2_TYPE_YUV422_8,
@@ -156,12 +156,12 @@ static const struct ipu_acpi_devices supported_devices[] = {
 			{
 				.chip_hwnum = 0,
 				.con_id = "reset",
-				.flags = GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN,
+				.flags = GPIO_ACTIVE_LOW,
 			},
 			{
 				.chip_hwnum = 8,
 				.con_id = "fsin",
-				.flags = GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN,
+				.flags = GPIO_ACTIVE_LOW,
 			},
 		},
 		.sensor_dt = MIPI_CSI2_TYPE_YUV422_8,
@@ -183,12 +183,12 @@ static const struct ipu_acpi_devices supported_devices[] = {
 			{
 				.chip_hwnum = 0,
 				.con_id = "reset",
-				.flags = GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN,
+				.flags = GPIO_ACTIVE_LOW,
 			},
 			{
 				.chip_hwnum = 7,
 				.con_id = "fsin",
-				.flags = GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN,
+				.flags = GPIO_ACTIVE_LOW,
 			},
 		},
 		.sensor_dt = MIPI_CSI2_TYPE_YUV422_8,
@@ -210,12 +210,12 @@ static const struct ipu_acpi_devices supported_devices[] = {
 			{
 				.chip_hwnum = 0,
 				.con_id = "reset",
-				.flags = GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN,
+				.flags = GPIO_ACTIVE_LOW,
 			},
 			{
 				.chip_hwnum = 7,
 				.con_id = "fsin",
-				.flags = GPIO_ACTIVE_LOW | GPIO_OPEN_DRAIN,
+				.flags = GPIO_ACTIVE_LOW,
 			},
 		},
 		.sensor_dt = MIPI_CSI2_TYPE_YUV422_8,
