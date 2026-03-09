@@ -23,5 +23,5 @@ wget --no-check-certificate https://mirrors.edge.kernel.org/pub/linux/kernel/v$m
 for arg in "$@"; do
     echo "Extracting: $kernelprefix/$arg"
     tar -xvf "$kernelprefix.tar.xz" "$kernelprefix/$arg" \
-      --xform="s,^${kernelprefix//./\\.}/,$major.$minor.$patch/,"
+      --xform="s,^${kernelprefix//./\\.}/,$major.$minor.0/,"
 done

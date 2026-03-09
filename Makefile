@@ -83,6 +83,9 @@ subdir-ccflags-y += -DCONFIG_VIDEO_INTEL_IPU6
 # Build IPU6 drivers from submodule
 obj-m += ipu6-drivers/drivers/media/pci/intel/ipu6/
 
+# Build ipu-bridge module
+obj-m += 6.12.0/drivers/media/pci/intel/
+
 endif
 
 obj-y += drivers/media/platform/intel/
