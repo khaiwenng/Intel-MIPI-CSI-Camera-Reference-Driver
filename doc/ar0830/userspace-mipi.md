@@ -71,7 +71,6 @@ This document details the configuration settings for the AR0830 MIPI CSI-2 senso
 |                            | Camera Option 1      | Camera Option 2      |
 |---                         |---                   |---                   |
 | Sensor Model               | User Custom          | User Custom          |
-| Sensor Model               | Custom Display Bridge| Custom Display Bridge|
 | Audio HID                  | _                    | _                    |
 | Custom HID                 | LIAR0830             | LIAR0830             |
 | Lanes Clock division       | 4 4 2 2              | 4 4 2 2              |
@@ -81,6 +80,7 @@ This document details the configuration settings for the AR0830 MIPI CSI-2 senso
 | Flash Support              | Disabled             | Disabled             |
 | Privacy LED                | Driver default       | Driver default       |
 | Rotation                   | 0                    | 0                    |
+| PhyConfiguration           | DPHY                 | DPHY                 |
 | PPR Value                  | 2                    | 2                    |
 | PPR Unit                   | 2                    | 2                    |
 | Camera module name         | _                    | _                    |
