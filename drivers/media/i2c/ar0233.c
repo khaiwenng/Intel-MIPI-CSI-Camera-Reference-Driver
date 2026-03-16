@@ -23,6 +23,8 @@
 #endif
 #define to_ar0233(_sd)                  container_of(_sd, struct ar0233, sd)
 
+#define AR0233_PM_RETRY_TIMEOUT		10
+#define AR0233_REG_SLEEP_200MS		200	/* 200ms */
 
 struct ar0233_reg {
         enum {
@@ -202,12 +204,76 @@ static int ar0233_disable_streams(struct v4l2_subdev *subdev,
 
 static int __maybe_unused ar0233_suspend(struct device *dev)
 {
+	struct i2c_client *client = to_i2c_client(dev);
+	struct v4l2_subdev *sd = i2c_get_clientdata(client);
+	struct ar0233 *ar0233 = to_ar0233(sd);
+
+	mutex_lock(&ar0233->mutex);
+
+	if (ar0233->streaming)
+		ar0233_stop_streaming(ar0233);
+
+	mutex_unlock(&ar0233->mutex);
+
+	/* Active low gpio reset, set 1 to power off sensor */
+	if (ar0233->reset_gpio)
+		gpiod_set_value_cansleep(ar0233->reset_gpio, 1);
+
 	return 0;
 }
 
 static int __maybe_unused ar0233_resume(struct device *dev)
 {
-	return 0;
+        struct i2c_client *client = to_i2c_client(dev);
+        struct v4l2_subdev *sd = i2c_get_clientdata(client);
+        struct ar0233 *ar0233 = to_ar0233(sd);
+        int ret, count;
+
+        mutex_lock(&ar0233->mutex);
+
+        /* Active low gpio reset, set 0 to power on sensor,
+         * sensor must be on before resume
+         */
+        if (ar0233->reset_gpio) {
+                for (count = 0; count < AR0233_PM_RETRY_TIMEOUT; count++) {
+                        gpiod_set_value_cansleep(ar0233->reset_gpio, 0);
+                        msleep(AR0233_REG_SLEEP_200MS);
+
+                        ret = gpiod_get_value_cansleep(ar0233->reset_gpio);
+                        if (ret == 0)
+                                break;
+                }
+
+                if (ret != 0) {
+                        dev_err(&client->dev, "Failed to power on sensor in pm resume\n");
+                        mutex_unlock(&ar0233->mutex);
+                        return -ETIMEDOUT;
+                }
+        }
+        /* S4 will clear the GPIO BIAS and CONFIG
+         * set fsin gpio output to trigger set_direction and set_config
+         * then set fsin to 0 to turn GPIO active */
+        if (ar0233->fsin_gpio) {
+                gpiod_direction_output(ar0233->fsin_gpio, 0);
+
+                for (count = 0; count < AR0233_PM_RETRY_TIMEOUT; count++) {
+                        gpiod_set_value_cansleep(ar0233->fsin_gpio, 0);
+                        msleep(AR0233_REG_SLEEP_200MS);
+
+                        ret = gpiod_get_value_cansleep(ar0233->fsin_gpio);
+                        if (ret == 0)
+                                break;
+                }
+
+                if (ret != 0) {
+                        dev_err(&client->dev, "Failed to turn on fsin in pm resume\n");
+                        mutex_unlock(&ar0233->mutex);
+                        return -ETIMEDOUT;
+                }
+        }
+unlock:
+        mutex_unlock(&ar0233->mutex);
+        return 0;
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
