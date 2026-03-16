@@ -38,7 +38,7 @@ module_param(max96724_serial_link_timeout_ms, int, S_IRUSR | S_IWUSR | S_IRGRP |
 MODULE_PARM_DESC(max96724_serial_link_timeout_ms, "Timeout for serial link in milliseconds");
 
 // Declarations
-static int max96724_set_phy_mode(struct max9x_common *common, unsigned int phy_mode);
+static int max96724_set_phy_mode(struct max9x_common *common, unsigned int phy_mode, unsigned int phy_clk);
 static int max96724_set_phy_enabled(struct max9x_common *common, unsigned int csi_id, bool enable);
 static int max96724_set_phy_lane_map(struct max9x_common *common, unsigned int csi_id, unsigned int phy_lane_map);
 static int max96724_set_phy_dpll_freq(struct max9x_common *common, unsigned int csi_id, unsigned int freq_mhz);
@@ -71,16 +71,18 @@ static int max96724_set_line_fault(struct max9x_common *common, unsigned int lin
 static int max96724_get_line_fault(struct max9x_common *common, unsigned int line);
 
 // Functions
-static int max96724_set_phy_mode(struct max9x_common *common, unsigned int phy_mode)
+static int max96724_set_phy_mode(struct max9x_common *common, unsigned int phy_mode, unsigned int phy_clk)
 {
 	struct device *dev = common->dev;
 	struct regmap *map = common->map;
 
-	dev_dbg(dev, "CSI: phy_mode=%d", phy_mode);
+	dev_dbg(dev, "CSI: phy_mode=%d, phy_clk=0x%02x", phy_mode, phy_clk);
 
 	return regmap_update_bits(map, MAX96724_MIPI_PHY0,
-		MAX96724_MIPI_PHY0_MODE_FIELD,
-		MAX9X_FIELD_PREP(MAX96724_MIPI_PHY0_MODE_FIELD, phy_mode));
+		MAX96724_MIPI_PHY0_MODE_FIELD |
+		MAX96724_MIPI_PHY0_CLK_PHY0 | MAX96724_MIPI_PHY0_CLK_PHY3,
+		MAX9X_FIELD_PREP(MAX96724_MIPI_PHY0_MODE_FIELD, phy_mode) |
+		(phy_clk & (MAX96724_MIPI_PHY0_CLK_PHY0 | MAX96724_MIPI_PHY0_CLK_PHY3)) );
 }
 
 static int max96724_set_phy_enabled(struct max9x_common *common,
@@ -237,6 +239,7 @@ static int max96724_configure_csi_dphy(struct max9x_common *common)
 	struct device *dev = common->dev;
 	unsigned int phy_mode;
 	unsigned int phy_lane_map[MAX96724_NUM_CSI_LINKS];
+	unsigned int phy_clk = 0;
 	unsigned int csi_id;
 	int ret;
 
@@ -300,6 +303,9 @@ static int max96724_configure_csi_dphy(struct max9x_common *common)
 		phy_lane_map[3] = MAX9X_FIELD_PREP(MAX96724_MIPI_PHY_LANE_MAP_FIELD(3, 0), 0)
 				| MAX9X_FIELD_PREP(MAX96724_MIPI_PHY_LANE_MAP_FIELD(3, 1), 1);
 
+		/* Use CKCP/N alternate CLK on PHY0 */
+		phy_clk = MAX96724_MIPI_PHY0_CLK_PHY0;
+
 	} else if (common->csi_link[0].config.num_lanes <= 2
 		   && common->csi_link[1].config.num_lanes <= 2
 		   && common->csi_link[2].config.num_lanes >= 3
@@ -321,7 +327,7 @@ static int max96724_configure_csi_dphy(struct max9x_common *common)
 		return -EINVAL;
 	}
 
-	ret = max96724_set_phy_mode(common, phy_mode);
+	ret = max96724_set_phy_mode(common, phy_mode, phy_clk);
 	if (ret)
 		return ret;
 

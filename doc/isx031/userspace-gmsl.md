@@ -98,8 +98,6 @@ This document details the configuration settings for the ISX031 GMSL sensor, pro
 AIC jumper connections
 ![AIC jumper connections](max96724-fabb-dphy.jpg)
 
-Known issue: Only 2 lanes (PPR value of 2) supported. 4 lanes support WIP
-
 |                            | Camera1 Link options | Camera2 Link Options |
 |---                         |---                   | ---                  |
 | Sensor Model               | User Custom          | User Custom          |
@@ -110,8 +108,8 @@ Known issue: Only 2 lanes (PPR value of 2) supported. 4 lanes support WIP
 | Camera position            | Front                | Back                 |
 | Flash Support              | Disabled             | Disabled             |
 | Privacy LED                | Driver default       | Driver default       |
-| Rotation                   | 0                    | 180                  |
-| PPR Value                  | 2                    | 4                    |
+| Rotation                   | 90                   | 180                  |
+| PPR Value                  | 4                    | 4                    |
 | PPR Unit                   | 4                    | 4                    |
 | Camera module name         | _                    | _                    |
 | MIPI port                  | 0                    | 4                    |
