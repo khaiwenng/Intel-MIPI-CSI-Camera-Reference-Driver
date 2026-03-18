@@ -264,7 +264,7 @@ static int lt6911uxc_status_update(struct lt6911uxc *lt6911uxc)
 		cci_write(lt6911uxc->regmap, REG_MIPI_TX_CTRL, 0x0, &ret);
 		lt6911uxc->cur_mode->height = 0;
 		lt6911uxc->cur_mode->width = 0;
-		lt6911uxc->cur_mode->fps = fps;
+		lt6911uxc->cur_mode->fps = 0;
 
 		lt6911uxc->cur_mode->code = MEDIA_BUS_FMT_UYVY8_1X16;
 
