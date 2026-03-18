@@ -105,6 +105,23 @@ Upon setup completion, verify sensor with:
 
 > **Note**: Refer to icamerasrc device-name property for more sensor details.
 
+##### How to relate Sensor Number with AIC Link Port
+
+| AIC Link Port | Sensor Number |
+|---            |---            |
+| A             | 1             |
+| B             | 2             |
+
+For AIC MAX9296
+
+![link-port](max9296-link-port.png)
+
+For AIC MAX96724
+
+![link-port](max96724-link-port.png)
+
+![link-port](max96724-link-port2.png)
+
 #### Frame Buffer Memory Type (IO Mode) Selection
 
 | IO Mode | Command Pipeline |

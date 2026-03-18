@@ -109,8 +109,7 @@ Config path: `Intel Advanced Menu`->`System Agent (SA) Configuration`->`MIPI Cam
 
 #### Connected to D-PHY of MAX96724 AIC
 
-AIC jumper connections
-![AIC jumper connections](max96724-fabb-dphy.jpg)
+![AIC jumper connections](max96724-fabb-dphy.png)
 
 |                            | Camera1 Link options | Camera2 Link Options |
 |---                         |---                   | ---                  |
@@ -154,8 +153,7 @@ Config path: `Intel Advanced Menu`->`System Agent (SA) Configuration`->`MIPI Cam
 
 #### Connected to C-PHY of MAX96724 AIC
 
-AIC jumper connections
-![AIC jumper connections](max96724-fabb-cphy.jpg)
+![AIC jumper connections](max96724-fabb-cphy.png)
 
 |                            | Camera1 Link options | Camera2 Link Options |
 |---                         |---                   | ---                  |
@@ -320,6 +318,23 @@ Upon setup completion, verify sensor with:
 | 1 | gst-launch-1.0 icamerasrc num-buffers=-1 num-vc=1 scene-mode=normal device-name=isx031-1 printfps=true io-mode=dma_mode ! 'video/x-raw(memory:DMABuf),drm-format=UYVY,width=1920,height=1536' ! glimagesink sync=false |
 
 > **Note**: Refer to icamerasrc device-name property for more sensor details.
+
+##### How to relate Sensor Number with AIC Link Port
+
+| AIC Link Port | Sensor Number |
+|---            |---            |
+| A             | 1             |
+| B             | 2             |
+
+For AIC MAX9296
+
+![link-port](max9296-link-port.png)
+
+For AIC MAX96724
+
+![link-port](max96724-link-port.png)
+
+![link-port](max96724-link-port2.png)
 
 #### Frame Buffer Memory Type (IO Mode) Selection
 
