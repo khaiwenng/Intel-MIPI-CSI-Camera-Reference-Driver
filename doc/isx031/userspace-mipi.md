@@ -171,19 +171,28 @@ Config path: `Intel Advanced Menu`->`System Agent (SA) Configuration`->`MIPI Cam
 
 Replace target system with recommended [ipu6ep](../../config/isx031/ipu6ep) setting
 
+> **Note:** Add config below only if using x2 MIPI sensors.
+
     sudo cp -r ../../config/isx031/ipu6ep /etc/camera
+    sudo sed -i '/availableSensors/c\        <availableSensors value="isx031-1-mipi-1,isx031-2-mipi-2"/>' /etc/camera/ipu6ep/libcamhal_profile.xml
 
 #### Setup for IPU6EPMTL
 
 Replace target system with recommended [ipu6epmtl](../../config/isx031/ipu6epmtl) setting
 
+> **Note:** Add config below only if using x2 MIPI sensors.
+
     sudo cp -r ../../config/isx031/ipu6epmtl /etc/camera
+    sudo sed -i '/availableSensors/c\        <availableSensors value="isx031-1-mipi-0,isx031-2-mipi-4"/> ' /etc/camera/ipu6epmtl/libcamhal_profile.xml
 
 #### Setup for IPU75XA
 
 Replace target system with recommended [ipu75xa](../../config/isx031/ipu75xa) setting
 
+> **Note:** Add config below only if using x2 MIPI sensors.
+
     sudo cp -r ../../config/isx031/ipu75xa /etc/camera
+    sudo sed -i '/availableSensors/c\        "availableSensors": ["isx031-1-mipi-0","isx031-2-mipi-2"],' /etc/camera/ipu75xa/libcamhal_configs.json
 
 ## Environment Setup
 

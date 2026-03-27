@@ -239,33 +239,50 @@ AIC jumper connections
 
 #### Setup for IPU6EP
 
-> **Note**: \
-If all 4x sensors are connected, please use config from [VTG ipu6ep](https://github.com/intel/ipu6-camera-hal/tree/iotg_ipu6/config/linux/ipu6ep). \
-Setup below is only for target that connected to 1x or 2x camera.
-
 Replace target system with recommended [ipu6ep](../../config/isx031/ipu6ep) setting
 
+> **Note:** Add config below only if using x1 GMSL sensor.
+
     sudo cp -r ../../config/isx031/ipu6ep /etc/camera
+    sudo sed -i '/availableSensors/c\        <availableSensors value="isx031-1"/>' /etc/camera/ipu6ep/libcamhal_profile.xml
+
+> **Note:** Add config below only if using x4 GMSL sensors.
+
+Please use config from [VTG ipu6ep](https://github.com/intel/ipu6-camera-hal/tree/iotg_ipu6/config/linux/ipu6ep).
+
 
 #### Setup for IPU6EPMTL
 
-> **Note**: \
-If all 4x sensors are connected, please use config from [VTG ipu6epmtl](https://github.com/intel/ipu6-camera-hal/tree/iotg_ipu6/config/linux/ipu6epmtl). \
-Setup below is only for target that connected to 1x or 2x camera.
-
 Replace target system with recommended [ipu6epmtl](../../config/isx031/ipu6epmtl) setting
 
+> **Note:** Add config below only if using x1 GMSL sensor.
+
     sudo cp -r ../../config/isx031/ipu6epmtl /etc/camera
+    sudo sed -i '/availableSensors/c\        <availableSensors value="isx031-1"/>' /etc/camera/ipu6epmtl/libcamhal_profile.xml
+
+> **Note:** Add config below only if using x4 GMSL sensors.
+
+Please use config from [VTG ipu6epmtl](https://github.com/intel/ipu6-camera-hal/tree/iotg_ipu6/config/linux/ipu6epmtl).
+
+> **Note:** Add config below only if using x8 GMSL sensors.
+
+    sudo cp -r ../../config/isx031/ipu6epmtl /etc/camera
+    sudo sed -i '/availableSensors/c\        <availableSensors value="isx031-8"/>' /etc/camera/ipu6epmtl/libcamhal_profile.xml
 
 #### Setup for IPU75XA
 
-> **Note**: \
-If all 4x sensors are connected, please use config from [VTG ipu75xa](https://github.com/intel/ipu7-camera-hal/tree/main/config/linux/ipu75xa). \
-Setup below is only for target that connected to 1x or 2x camera.
-
 Replace target system with recommended [ipu75xa](../../config/isx031/ipu75xa) setting
 
+> **Note:** Add config below only if using x1 GMSL sensor.
+
     sudo cp -r ../../config/isx031/ipu75xa /etc/camera
+    sudo sed -i '/"availableSensors"/c\                "availableSensors": ["isx031-1-0"],' /etc/camera/ipu75xa/libcamhal_configs.json
+
+> **Note:** Add config below only if using x8 GMSL sensors.
+
+Please use config from [VTG ipu75xa](https://github.com/intel/ipu7-camera-hal/tree/main/config/linux/ipu75xa).
+
+    sudo sed -i '/"availableSensors"/c\                "availableSensors": ["isx031-1-0","isx031-2-0","isx031-3-0","isx031-4-0","isx031-5-2","isx031-6-2","isx031-7-2","isx031-8-2",' /etc/camera/ipu75xa/libcamhal_configs.json
 
 ## Environment Setup
 

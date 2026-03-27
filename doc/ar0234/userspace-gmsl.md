@@ -52,7 +52,10 @@ Config path: `Intel Advanced Menu`->`System Agent (SA) Configuration`->`MIPI Cam
 
 Replace target system with recommended [ipu6epmtl](../../config/ar0234/ipu6epmtl) setting
 
+> **Note:** Add config below only if using x2 GMSL sensors.
+
     sudo cp -r ../../config/ar0234/ipu6epmtl /etc/camera
+    sudo sed -i '/availableSensors/c\        <availableSensors value="ar0234-1-0,ar0234-2-0"/>' /etc/camera/ipu6epmtl/libcamhal_profile.xml
 
 ## Camera Tuning File Setup
 
