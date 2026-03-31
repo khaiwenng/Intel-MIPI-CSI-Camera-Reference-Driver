@@ -30,10 +30,10 @@ This repository contains reference drivers and configurations for Intel MIPI CSI
 
 | Sensor          |Sensor Type | Vendor          | IPU Version                |
 |-----------------|------------|-----------------|----------------------------|
-| AR0233+GW5300   | GMSL       | Sensing         | IPU6EPMTL                  |
+| AR0233+GW5300   | GMSL       | Sensing         | IPU6EPMTL, IPU75XA         |
 | AR0234          | GMSL       | D3 Embedded     | IPU6EPMTL                  |
 | AR0234          | MIPI CSI-2 | D3 Embedded     | IPU6EPMTL                  |
-| AR0820+GW5300   | GMSL       | Sensing         | IPU6EPMTL                  |
+| AR0820+GW5300   | GMSL       | Sensing         | IPU6EPMTL, IPU75XA         |
 | AR0830+AP1302   | MIPI CSI-2 | Leopard Imaging | IPU6EPMTL, IPU75XA         |
 | ISX031          | GMSL       | D3 Embedded     | IPU6EP, IPU6EPMTL, IPU75XA |
 | ISX031          | GMSL       | Leopard Imaging | IPU6EP, IPU6EPMTL, IPU75XA |
